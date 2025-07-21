@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { DayNightCycle, AnimatedNumber } from "@/components/day-night-cycle";
 import { AnimatedYear } from "@/components/animated-year";
@@ -8,6 +8,8 @@ import { WeeklyCalendar } from "@/components/weekly-calender";
 import { TaskList } from "@/components/task-list";
 import { Timer, Plus, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AddTaskModal } from "@/components/add-task-modal";
+import { TaskOptionsModal } from "@/components/task-options-modal";
 
 export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
@@ -386,6 +388,32 @@ export default function Home() {
             </div>
           </div>
         </motion.div>
+
+        <AnimatePresence>
+          {showAddTask && (
+            <AddTaskModal
+              onClose={() => setShowAddTask(false)}
+              onAddTask={addTask}
+              customTags={customTags}
+              onAddCustomTag={addCustomTag}
+            />
+          )}
+
+          {showTaskOptions && selectedTask && (
+            <TaskOptionsModal
+              task={selectedTask}
+              customTags={customTags}
+              onClose={() => {
+                setShowTaskOptions(false);
+                setSelectedTask(null);
+              }}
+              onUpdateTask={updateTask}
+              onDeleteTask={deleteTask}
+              onAddCustomTag={addCustomTag}
+              onToggleTask={toggleTask}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
