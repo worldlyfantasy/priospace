@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Tag, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ const PRESET_COLORS = [
   "#8b5cf6", // purple
   "#ec4899", // pink
   "#06b6d4", // cyan
+  "#a85520", // brown
+  "#6366f1", // indigo
 ];
 
 export function AddTaskModal({
@@ -35,6 +37,54 @@ export function AddTaskModal({
   const [showAddTag, setShowAddTag] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
+
+  // Arrow key navigation for categories
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        e.preventDefault();
+
+        if (customTags.length === 0) return;
+
+        const currentIndex = customTags.findIndex(
+          (tag) => tag.id === selectedTag
+        );
+        let newIndex;
+
+        if (e.key === "ArrowDown") {
+          if (currentIndex === -1) {
+            // No selection, select first tag
+            newIndex = 0;
+          } else if (currentIndex === customTags.length - 1) {
+            // At last tag, clear selection
+            setSelectedTag("");
+            return;
+          } else {
+            // Go to next tag
+            newIndex = currentIndex + 1;
+          }
+        } else {
+          // ArrowUp
+          if (currentIndex === -1) {
+            // No selection, select last tag
+            newIndex = customTags.length - 1;
+          } else if (currentIndex === 0) {
+            // At first tag, clear selection
+            setSelectedTag("");
+            return;
+          } else {
+            // Go to previous tag
+            newIndex = currentIndex - 1;
+          }
+        }
+
+        setSelectedTag(customTags[newIndex].id);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [customTags, selectedTag]);
 
   const handleSubmit = () => {
     if (taskTitle.trim()) {

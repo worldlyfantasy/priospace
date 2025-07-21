@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Check, Clock, RefreshCcw } from "lucide-react";
+import { Calendar, Check, Clock, RotateCcw } from "lucide-react";
 import { formatFocusTime } from "@/utils/time"; // Assuming this utility exists
 
 export function TaskList({
@@ -151,10 +151,10 @@ export function TaskList({
               animate="visible"
               exit="exit"
             >
-              <RefreshCcw className="h-4 w-4" /> Habits
+              <RotateCcw className="h-4 w-4" /> Habits
             </motion.div>
             <motion.div
-              className="space-y-3"
+              className=""
               variants={containerVariants}
               initial="hidden"
               animate="visible"
@@ -172,6 +172,7 @@ export function TaskList({
                   getTagInfo={getTagInfo}
                   isHabit={true}
                   variants={taskVariants}
+                  isLastTask={task.id === habitTasks[habitTasks.length - 1].id}
                 />
               ))}
             </motion.div>
@@ -198,7 +199,7 @@ export function TaskList({
               <Calendar className="h-4 w-4" /> Tasks
             </motion.div>
             <motion.div
-              className="space-y-3"
+              className=""
               variants={containerVariants}
               initial="hidden"
               animate="visible"
@@ -216,6 +217,9 @@ export function TaskList({
                   getTagInfo={getTagInfo}
                   isHabit={false}
                   variants={taskVariants}
+                  isLastTask={
+                    task.id === regularTasks[regularTasks.length - 1].id
+                  }
                 />
               ))}
             </motion.div>
@@ -249,6 +253,7 @@ function TaskItem({
   getTagInfo,
   isHabit,
   variants,
+  isLastTask,
 }) {
   const tagInfo = getTagInfo(task.tag);
 
@@ -256,13 +261,12 @@ function TaskItem({
     <motion.div
       variants={variants}
       layout
-      className={`relative p-4 border-y border-dashed cursor-pointer select-none overflow-hidden ${
+      className={`relative p-4 border-t border-dashed  cursor-pointer select-none overflow-hidden ${
         task.completed
           ? ""
-          : isHabit
-          ? " dark:bg-gray-800 border-primary/50 dark:border-gray-700 hover:bg-primary/5"
-          : " dark:bg-gray-800 border-primary/50 dark:border-gray-700 hover:bg-primary/5"
-      }`}
+          : "border-primary/50 dark:border-primary-700 hover:bg-primary/5"
+      } 
+      ${isLastTask ? "border-b" : ""}`}
       onMouseDown={(e) => onMouseDown(task.id, e)}
       onTouchStart={(e) => onMouseDown(task.id, e)}
       onClick={(e) => onTaskClick(task, e)}

@@ -31,6 +31,8 @@ const PRESET_COLORS = [
   "#8b5cf6", // purple
   "#ec4899", // pink
   "#06b6d4", // cyan
+  "#a85520", // brown
+  "#6366f1", // indigo
 ];
 
 export function TaskOptionsModal({
@@ -286,7 +288,9 @@ export function TaskOptionsModal({
                 </div>
               ) : (
                 <div className="flex items-center justify-between p-4 px-0 h-10 rounded-xl ">
-                  <span className="font-extrabold text-2xl">{task.title}</span>
+                  <span className="font-extrabold text-2xl">
+                    {editTitle || task.title}
+                  </span>
                   <motion.div
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}

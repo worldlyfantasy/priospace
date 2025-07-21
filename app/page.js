@@ -10,6 +10,8 @@ import { Timer, Plus, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddTaskModal } from "@/components/add-task-modal";
 import { TaskOptionsModal } from "@/components/task-options-modal";
+import { HabitTracker } from "@/components/habit-tracker";
+import { TimerModal } from "@/components/timer-modal";
 
 export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
@@ -410,6 +412,26 @@ export default function Home() {
               onUpdateTask={updateTask}
               onDeleteTask={deleteTask}
               onAddCustomTag={addCustomTag}
+              onToggleTask={toggleTask}
+            />
+          )}
+
+          {showHabits && (
+            <HabitTracker
+              habits={habits}
+              customTags={customTags}
+              onClose={() => setShowHabits(false)}
+              onUpdateHabits={setHabits}
+              onAddCustomTag={addCustomTag}
+            />
+          )}
+
+          {showTimer && (
+            <TimerModal
+              tasks={allTasks}
+              onClose={() => setShowTimer(false)}
+              onUpdateTaskTime={updateTaskTime}
+              onUpdateTaskFocusTime={updateTaskFocusTime}
               onToggleTask={toggleTask}
             />
           )}
