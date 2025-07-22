@@ -35,12 +35,12 @@ export function WeeklyCalendar({ selectedDate, onDateSelect }) {
   };
 
   return (
-    <div className="flex flex-col gap-3 h-[90px]">
-      <div className="flex items-center justify-between h-full">
+    <div className="flex flex-col gap-3 sm:h-[90px]">
+      <div className="flex items-center sm:justify-between justify-center h-full">
         <Button
           variant="ghost"
           size="sm"
-          className="w-5 h-full"
+          className="w-5 h-full hidden sm:flex"
           onClick={() => setCurrentWeek(currentWeek - 1)}
         >
           <ChevronLeft className="h-4 w-4" />
@@ -52,7 +52,7 @@ export function WeeklyCalendar({ selectedDate, onDateSelect }) {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => onDateSelect(date)}
-              className={`flex-shrink-0 flex flex-col font-bold items-center p-2 rounded-lg min-w-[50px] transition-colors ${
+              className={`flex-shrink-0 flex flex-col font-bold items-center p-2 rounded-lg min-w-[30px] sm:min-w-[50px] transition-colors ${
                 isSelected(date)
                   ? "border border-primary/50"
                   : isToday(date)
@@ -73,7 +73,27 @@ export function WeeklyCalendar({ selectedDate, onDateSelect }) {
         <Button
           variant="ghost"
           size="sm"
-          className="w-5 h-[80px]"
+          className="w-5 h-[80px] hidden sm:flex"
+          onClick={() => setCurrentWeek(currentWeek + 1)}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className=" items-center justify-center gap-10 h-full sm:hidden flex">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-5 h-full p-2"
+          onClick={() => setCurrentWeek(currentWeek - 1)}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-5 h-full p-2"
           onClick={() => setCurrentWeek(currentWeek + 1)}
         >
           <ChevronRight className="h-4 w-4" />

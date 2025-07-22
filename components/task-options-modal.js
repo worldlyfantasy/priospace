@@ -11,6 +11,7 @@ import {
   Plus,
   Settings,
   Save,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,9 @@ export function TaskOptionsModal({
   onDeleteTask,
   onAddCustomTag,
   onToggleTask,
+  selectedDate,
+  onTransferTask,
+  currentActualDate,
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
@@ -88,7 +92,14 @@ export function TaskOptionsModal({
     }
   };
 
+  const handleTransfer = () => {
+    onTransferTask(task.id, task.createdAt, currentActualDate);
+    onClose();
+  };
+
   const currentTag = customTags.find((tag) => tag.id === task.tag);
+  const isDifferentDay =
+    task.createdAt.toDateString() !== currentActualDate.toDateString();
 
   // Animation variants
   const backdropVariants = {
@@ -251,7 +262,7 @@ export function TaskOptionsModal({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl p-2"
+              className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl p-2 dark:text-white"
             >
               <X className="h-5 w-5" />
             </Button>
@@ -490,6 +501,17 @@ export function TaskOptionsModal({
                   {task.completed ? "Mark Incomplete" : "Mark Complete"}
                 </Button>
               </motion.div>
+
+              {isDifferentDay && !task.isHabit && (
+                <Button
+                  onClick={handleTransfer}
+                  className="w-full bg-transparent rounded-xl font-extrabold text-lg"
+                  variant="outline"
+                >
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  Transfer to Today
+                </Button>
+              )}
 
               {/* Only show delete button for regular tasks, not habits */}
               {!task.isHabit && (

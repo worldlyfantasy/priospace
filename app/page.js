@@ -6,12 +6,13 @@ import { DayNightCycle, AnimatedNumber } from "@/components/day-night-cycle";
 import { AnimatedYear } from "@/components/animated-year";
 import { WeeklyCalendar } from "@/components/weekly-calender";
 import { TaskList } from "@/components/task-list";
-import { Timer, Plus, BarChart3 } from "lucide-react";
+import { Timer, Plus, BarChart3, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddTaskModal } from "@/components/add-task-modal";
 import { TaskOptionsModal } from "@/components/task-options-modal";
 import { HabitTracker } from "@/components/habit-tracker";
 import { TimerModal } from "@/components/timer-modal";
+import { SettingsModal } from "@/components/settings-modal";
 
 export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
@@ -207,6 +208,59 @@ export default function Home() {
     setDailyTasks({ ...dailyTasks, [dateString]: updatedTasks });
   };
 
+  const transferTaskToCurrentDay = (taskId, originalDate, targetDate) => {
+    const originalDateString = getDateString(originalDate);
+    const targetDateString = getDateString(targetDate);
+
+    if (originalDateString === targetDateString) {
+      // Already on the target day, no transfer needed
+      return;
+    }
+
+    setDailyTasks((prevDailyTasks) => {
+      const newDailyTasks = { ...prevDailyTasks };
+
+      // Find the task in its original day
+      const originalDayTasks = newDailyTasks[originalDateString] || [];
+      const taskToTransferIndex = originalDayTasks.findIndex(
+        (t) => t.id === taskId
+      );
+
+      if (taskToTransferIndex === -1) {
+        console.warn(
+          "Task not found for transfer:",
+          taskId,
+          originalDateString
+        );
+        return prevDailyTasks; // Task not found, return original state
+      }
+
+      const [taskToTransfer] = originalDayTasks.splice(taskToTransferIndex, 1);
+
+      // Update the task's properties for the new day
+      const updatedTask = {
+        ...taskToTransfer,
+        createdAt: targetDate, // Set creation date to the actual current date
+        completed: false, // Reset completion status
+        timeSpent: 0, // Reset time spent
+        focusTime: 0, // Reset focus time
+      };
+
+      // Add to the current day's tasks
+      newDailyTasks[targetDateString] = [
+        ...(newDailyTasks[targetDateString] || []),
+        updatedTask,
+      ];
+
+      // Clean up empty original day entry if no tasks left
+      if (newDailyTasks[originalDateString]?.length === 0) {
+        delete newDailyTasks[originalDateString];
+      }
+
+      return newDailyTasks;
+    });
+  };
+
   const updateTaskFocusTime = (id, focusTimeToAdd) => {
     const dateString = getDateString(selectedDate);
     const currentTasks = getCurrentDayTasks();
@@ -307,8 +361,15 @@ export default function Home() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="flex flex-col h-screen"
+          className="flex flex-col h-screen relative"
         >
+          <button
+            onClick={() => setShowSettings(true)}
+            className="absolute left-1/2 -translate-x-1/2 z-10 bg-primary text-background rounded-b-lg py-2 px-2 pt-1"
+          >
+            <Settings className="h-3 w-3" />
+          </button>
+
           {/* Header Section */}
           <div className="p-4 px-0 border-b border-dashed">
             <div className="flex items-center justify-between">
@@ -358,7 +419,7 @@ export default function Home() {
                 onClick={() => setShowTimer(true)}
                 variant="ghost"
                 size="lg"
-                className="flex-1 flex items-center justify-center gap-2 font-extrabold hover:bg-primary/5 group"
+                className="flex-1 flex items-center justify-center px-4 sm:px-8 gap-2 font-extrabold hover:bg-primary/5 group dark:text-white"
               >
                 <div className="group-hover:scale-110 transition-transform  flex items-center gap-2">
                   <Timer className="h-5 w-5" />
@@ -369,18 +430,16 @@ export default function Home() {
               <Button
                 onClick={() => setShowAddTask(true)}
                 size="lg"
-                className="mx-4 rounded-full w-12 h-12 p-0 bg-primary hover:bg-primary/90 group hover:scale-110 transition-transform"
+                className="mx-4 rounded-full w-12 h-12 px-4 sm:px-8 bg-primary hover:bg-primary/90 group hover:scale-110 transition-transform [&_svg]:size-5"
               >
-                <div className="group-hover:scale-110 transition-transform">
-                  <Plus className="h-8 w-8" />
-                </div>
+                <Plus className="h-5 w-5 group-hover:scale-110 transition-transform" />
               </Button>
 
               <Button
                 onClick={() => setShowHabits(true)}
                 variant="ghost"
                 size="lg"
-                className="flex-1 flex items-center justify-center gap-2 font-extrabold hover:bg-primary/5 group"
+                className="flex-1 flex items-center justify-center px-4 sm:px-8 gap-2 font-extrabold hover:bg-primary/5 group dark:text-white"
               >
                 <div className="group-hover:scale-110 transition-transform  flex items-center gap-2">
                   <BarChart3 className="h-5 w-5" />
@@ -392,6 +451,16 @@ export default function Home() {
         </motion.div>
 
         <AnimatePresence>
+          {showSettings && (
+            <SettingsModal
+              onClose={() => setShowSettings(false)}
+              darkMode={darkMode}
+              onToggleDarkMode={() => setDarkMode(!darkMode)}
+              onExportData={exportData}
+              onImportData={importData}
+            />
+          )}
+
           {showAddTask && (
             <AddTaskModal
               onClose={() => setShowAddTask(false)}
@@ -413,6 +482,9 @@ export default function Home() {
               onDeleteTask={deleteTask}
               onAddCustomTag={addCustomTag}
               onToggleTask={toggleTask}
+              selectedDate={selectedDate}
+              onTransferTask={transferTaskToCurrentDay}
+              currentActualDate={new Date()}
             />
           )}
 

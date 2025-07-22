@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -13,6 +13,8 @@ import {
   Minus,
   Timer,
   Briefcase,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +42,13 @@ export function TimerModal({
   const [sessionStartTime, setSessionStartTime] = useState(0);
   const [lastFocusUpdate, setLastFocusUpdate] = useState(Date.now());
   const [overtimeSeconds, setOvertimeSeconds] = useState(0); // Track overtime
+  const [isOvertimeStarted, setIsOvertimeStarted] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+
+  // Audio refs
+  const playingAudioRef = useRef(null);
+  const breakAudioRef = useRef(null);
+  const overtimeAudioRef = useRef(null);
 
   const presets = [
     { value: "5", label: "5 min", seconds: 5 * 60 },
@@ -48,34 +57,108 @@ export function TimerModal({
     { value: "50", label: "50 min", seconds: 50 * 60 },
   ];
 
-  // Corrected Code
+  // Initialize audio elements
+  useEffect(() => {
+    playingAudioRef.current = new Audio("/music/playing.mp3");
+    breakAudioRef.current = new Audio("/music/break.mp3");
+    overtimeAudioRef.current = new Audio("/music/overtime.mp3");
+
+    // Set audio properties
+    [
+      playingAudioRef.current,
+      breakAudioRef.current,
+      overtimeAudioRef.current,
+    ].forEach((audio) => {
+      audio.loop = true;
+      audio.volume = 0.3; // Set a reasonable default volume
+    });
+
+    // Cleanup function
+    return () => {
+      [
+        playingAudioRef.current,
+        breakAudioRef.current,
+        overtimeAudioRef.current,
+      ].forEach((audio) => {
+        if (audio) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      });
+    };
+  }, []);
+
+  // Audio control function
+  const playAudio = (audioRef, shouldPlay = !isMuted) => {
+    if (shouldPlay && audioRef.current) {
+      // Stop all other audio first
+      stopAllAudio();
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch((error) => {
+        console.log("Audio playback failed:", error);
+      });
+    }
+  };
+
+  const stopAllAudio = () => {
+    [
+      playingAudioRef.current,
+      breakAudioRef.current,
+      overtimeAudioRef.current,
+    ].forEach((audio) => {
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    });
+  };
+
+  const toggleMute = () => {
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState);
+
+    if (newMutedState) {
+      // Muting - stop all audio
+      stopAllAudio();
+    } else {
+      // Unmuting - resume appropriate audio based on current state
+      if (isRunning) {
+        if (timeLeft === 0 && isOvertimeStarted) {
+          playAudio(overtimeAudioRef);
+        } else if (isBreak) {
+          playAudio(breakAudioRef);
+        } else if (timeLeft > 0) {
+          playAudio(playingAudioRef);
+        }
+      }
+    }
+  };
 
   // Main countdown timer effect
   useEffect(() => {
-    // This interval only runs when the timer should be active AND has time remaining.
     if (isRunning && timeLeft > 0) {
       const interval = setInterval(() => {
         setTimeLeft((prev) => prev - 1);
       }, 1000);
-
-      // The cleanup function clears the interval when the component re-renders
-      // or when the dependencies change.
       return () => clearInterval(interval);
     }
-  }, [isRunning, timeLeft]); // Add timeLeft as a dependency
+  }, [isRunning, timeLeft]);
 
   // Overtime counter effect
   useEffect(() => {
-    // This interval ONLY runs when the timer is active but has run out of time.
     if (isRunning && timeLeft === 0) {
+      // Start overtime audio when entering overtime mode
+      if (!isOvertimeStarted) {
+        setIsOvertimeStarted(true);
+        playAudio(overtimeAudioRef); // Uses default mute check
+      }
+
       const overtimeInterval = setInterval(() => {
         setOvertimeSeconds((prev) => prev + 1);
       }, 1000);
-
-      // The cleanup function for the overtime interval.
       return () => clearInterval(overtimeInterval);
     }
-  }, [isRunning, timeLeft]); // Also depends on isRunning and timeLeft
+  }, [isRunning, timeLeft, isOvertimeStarted, isMuted]);
 
   // Focus time tracking effect - updates every 10 seconds
   useEffect(() => {
@@ -88,7 +171,7 @@ export function TimerModal({
           onUpdateTaskFocusTime(selectedTask, 10);
           setLastFocusUpdate(now);
         }
-      }, 10000); // Check every 10 seconds
+      }, 10000);
     }
     return () => clearInterval(focusInterval);
   }, [
@@ -106,6 +189,25 @@ export function TimerModal({
     }
   }, [isRunning, isBreak, selectedTask]);
 
+  // Audio control based on timer state
+  useEffect(() => {
+    if (isRunning && !isMuted) {
+      if (timeLeft === 0) {
+        playAudio(overtimeAudioRef);
+      } else if (isBreak) {
+        playAudio(breakAudioRef);
+      } else {
+        playAudio(playingAudioRef);
+      }
+    } else {
+      stopAllAudio();
+      if (!isRunning) {
+        setIsOvertimeStarted(false);
+      }
+    }
+    // The dependency `timeLeft > 0` is a boolean that only changes when the timer hits zero.
+  }, [isRunning, isBreak, timeLeft > 0, isMuted]);
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -116,52 +218,51 @@ export function TimerModal({
 
   const handlePresetChange = (value) => {
     setPreset(value);
-    setWorkPreset(value); // Save the work preset when user changes it
+    setWorkPreset(value);
     const presetData = presets.find((p) => p.value === value);
     if (presetData) {
       setTimeLeft(presetData.seconds);
       setIsRunning(false);
       setSessionStartTime(presetData.seconds);
-      setOvertimeSeconds(0); // Reset overtime
+      setOvertimeSeconds(0);
+      setIsOvertimeStarted(false);
+      stopAllAudio();
     }
   };
 
   const adjustTime = (minutes) => {
-    const newTime = Math.max(60, timeLeft + minutes * 60); // Cap at 60 seconds (1 minute)
+    const newTime = Math.max(60, timeLeft + minutes * 60);
     setTimeLeft(newTime);
-    // Update session start time if we're adjusting while running
     if (isRunning) {
       setSessionStartTime((prev) => prev + minutes * 60);
     } else {
       setSessionStartTime(newTime);
     }
-    // Reset overtime when adjusting time
     if (newTime > 0) {
       setOvertimeSeconds(0);
+      setIsOvertimeStarted(false);
     }
   };
 
   const handleStart = () => {
     if (!isRunning && timeLeft > 0) {
       setSessionStartTime(timeLeft);
-      setOvertimeSeconds(0); // Reset overtime when starting fresh
+      setOvertimeSeconds(0);
+      setIsOvertimeStarted(false);
     }
     setIsRunning(!isRunning);
   };
 
   const handleFinishTask = () => {
     if (selectedTask && !isBreak) {
-      // Calculate total time spent including overtime
       const baseTimeSpent = Math.ceil((sessionStartTime - timeLeft) / 60);
       const overtimeMinutes = Math.ceil(overtimeSeconds / 60);
       const totalTimeSpent = baseTimeSpent + overtimeMinutes;
 
-      // Update task time if any time was spent
       if (totalTimeSpent > 0) {
         onUpdateTaskTime(selectedTask, totalTimeSpent);
       }
 
-      // Add any remaining focus time (less than 10 seconds)
       if (isRunning) {
         const now = Date.now();
         const remainingFocusTime = Math.floor((now - lastFocusUpdate) / 1000);
@@ -170,18 +271,19 @@ export function TimerModal({
         }
       }
 
-      // Mark the task as complete
       onToggleTask(selectedTask);
     }
+    stopAllAudio();
     onClose();
   };
 
   const handleBreak = () => {
     setIsBreak(true);
-    setTimeLeft(5 * 60); // 5 minute break
+    setTimeLeft(5 * 60);
     setSessionStartTime(5 * 60);
-    setOvertimeSeconds(0); // Reset overtime
-    setIsRunning(true); // Auto-start break timer
+    setOvertimeSeconds(0);
+    setIsOvertimeStarted(false);
+    setIsRunning(true);
     setPreset("5");
   };
 
@@ -191,19 +293,27 @@ export function TimerModal({
       presets.find((p) => p.value === workPreset) || presets[2];
     setTimeLeft(selectedPreset.seconds);
     setSessionStartTime(selectedPreset.seconds);
-    setOvertimeSeconds(0); // Reset overtime
-    setIsRunning(true); // Auto-start work timer
+    setOvertimeSeconds(0);
+    setIsOvertimeStarted(false);
+    setIsRunning(true);
     setPreset(selectedPreset.value);
   };
 
   const handleAbandon = () => {
     setIsRunning(false);
-    setOvertimeSeconds(0); // Reset overtime
+    setOvertimeSeconds(0);
+    setIsOvertimeStarted(false);
+    stopAllAudio();
     const presetData = presets.find((p) => p.value === preset);
     if (presetData) {
       setTimeLeft(presetData.seconds);
       setSessionStartTime(presetData.seconds);
     }
+  };
+
+  const handleClose = () => {
+    stopAllAudio();
+    onClose();
   };
 
   // Filter to show all incomplete tasks and habits
@@ -277,7 +387,7 @@ export function TimerModal({
       animate="visible"
       exit="exit"
       className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end justify-center z-50"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
       <motion.div
         variants={modalVariants}
@@ -293,7 +403,7 @@ export function TimerModal({
         >
           <div
             className="w-12 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full cursor-pointer"
-            onClick={onClose}
+            onClick={handleClose}
           />
         </motion.div>
 
@@ -320,14 +430,29 @@ export function TimerModal({
                 {isBreak ? "Break Time" : "Focus Timer"}
               </h2>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl p-2"
-            >
-              <X className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Mute/Unmute Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleMute}
+                className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl p-2 dark:text-white"
+              >
+                {isMuted ? (
+                  <VolumeX className="h-5 w-5" />
+                ) : (
+                  <Volume2 className="h-5 w-5" />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClose}
+                className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl p-2 dark:text-white"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
           </motion.div>
 
           <motion.div
@@ -431,7 +556,7 @@ export function TimerModal({
                     <div className="flex items-center justify-center">
                       {/* Minus Button */}
                       <motion.div
-                        className="mr-6"
+                        className="mr-6 sm:flex hidden"
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                       >
@@ -476,7 +601,7 @@ export function TimerModal({
 
                       {/* Plus Button */}
                       <motion.div
-                        className="ml-6"
+                        className="ml-6 sm:flex hidden"
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                       >
@@ -492,27 +617,59 @@ export function TimerModal({
                     </div>
                   </div>
 
-                  {/* Session Status */}
-                  <motion.div
-                    initial={{ scale: 0.9 }}
-                    animate={{ scale: 1 }}
-                    className="flex justify-center"
-                  >
-                    <div
-                      className={`inline-flex items-center px-4 py-2 rounded-xl text-sm font-extrabold uppercase tracking-wider shadow-lg ${
-                        timeLeft === 0
-                          ? "bg-primary/10 text-primary border-2 border-primary/30"
-                          : isBreak
-                          ? "bg-primary/10 text-primary border-2 border-primary/30"
-                          : "bg-primary/10 text-primary border-2 border-primary/30"
-                      }`}
+                  <motion.div className="flex justify-center items-center gap-2">
+                    <motion.div
+                      className="flex sm:hidden"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
                     >
-                      {timeLeft === 0
-                        ? "⏰ Overtime Mode"
-                        : isBreak
-                        ? "🧘 Break Time"
-                        : "🎯 Focus Time"}
-                    </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => adjustTime(-5)}
+                        className="border-2 border-gray-300 dark:border-gray-600 hover:border-primary/70 dark:hover:border-primary/80 rounded-xl font-extrabold w-12 h-10 p-0"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                    </motion.div>
+
+                    {/* Session Status */}
+                    <motion.div
+                      initial={{ scale: 0.9 }}
+                      animate={{ scale: 1 }}
+                      className="flex justify-center items-center"
+                    >
+                      <div
+                        className={`inline-flex items-center px-4 py-2 rounded-xl text-sm font-extrabold uppercase tracking-wider shadow-lg ${
+                          timeLeft === 0
+                            ? "bg-red-100 text-red-600 border-2 border-red-300"
+                            : isBreak
+                            ? "bg-green-100 text-green-600 border-2 border-green-300"
+                            : "bg-primary/10 text-primary border-2 border-primary/30"
+                        }`}
+                      >
+                        {timeLeft === 0
+                          ? "⏰ Overtime Mode"
+                          : isBreak
+                          ? "🧘 Break Time"
+                          : "🎯 Focus Time"}
+                      </div>
+                    </motion.div>
+
+                    <motion.div
+                      className="flex sm:hidden"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => adjustTime(5)}
+                        className="border-2 border-gray-300 dark:border-gray-600 hover:border-primary/70 dark:hover:border-primary/80 rounded-xl font-extrabold w-12 h-10 p-0"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </motion.div>
                   </motion.div>
                 </motion.div>
 

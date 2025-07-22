@@ -340,7 +340,7 @@ export function HabitTracker({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl p-2"
+              className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl p-2 dark:text-white"
             >
               <X className="h-5 w-5" />
             </Button>
