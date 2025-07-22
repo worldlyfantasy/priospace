@@ -178,7 +178,7 @@ export function TaskList({
   };
 
   return (
-    <div className="h-full overflow-y-auto overflow-x-hidden p-4 px-0">
+    <div className="h-full overflow-y-auto hide-scroll overflow-x-hidden p-4 px-0">
       <AnimatePresence>
         {/* Habits Section */}
         {habitTasks.length > 0 && (

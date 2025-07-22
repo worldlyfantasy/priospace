@@ -106,6 +106,14 @@
   }
 }
 
+.hide-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

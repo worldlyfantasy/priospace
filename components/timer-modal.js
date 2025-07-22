@@ -45,10 +45,12 @@ export function TimerModal({
   const [isOvertimeStarted, setIsOvertimeStarted] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
-  // Audio refs
-  const playingAudioRef = useRef(null);
-  const breakAudioRef = useRef(null);
-  const overtimeAudioRef = useRef(null);
+  // Audio context and buffer refs for true seamless looping
+  const audioContextRef = useRef(null);
+  const audioBuffersRef = useRef({});
+  const audioSourcesRef = useRef({});
+  const gainNodesRef = useRef({});
+  const isInitializedRef = useRef(false);
 
   const presets = [
     { value: "5", label: "5 min", seconds: 5 * 60 },
@@ -57,58 +59,202 @@ export function TimerModal({
     { value: "50", label: "50 min", seconds: 50 * 60 },
   ];
 
-  // Initialize audio elements
+  // Initialize Web Audio API with aggressive looping
   useEffect(() => {
-    playingAudioRef.current = new Audio("/music/playing.mp3");
-    breakAudioRef.current = new Audio("/music/break.mp3");
-    overtimeAudioRef.current = new Audio("/music/overtime.mp3");
+    const initAudio = async () => {
+      try {
+        // Create audio context
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioContextRef.current = new AudioContext();
 
-    // Set audio properties
-    [
-      playingAudioRef.current,
-      breakAudioRef.current,
-      overtimeAudioRef.current,
-    ].forEach((audio) => {
-      audio.loop = true;
-      audio.volume = 0.3; // Set a reasonable default volume
-    });
+        const loadAudioBuffer = async (url, key) => {
+          try {
+            const response = await fetch(url);
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await audioContextRef.current.decodeAudioData(
+              arrayBuffer
+            );
 
-    // Cleanup function
-    return () => {
-      [
-        playingAudioRef.current,
-        breakAudioRef.current,
-        overtimeAudioRef.current,
-      ].forEach((audio) => {
-        if (audio) {
-          audio.pause();
-          audio.currentTime = 0;
+            // Trim silence from beginning and end
+            const trimmedBuffer = trimSilence(audioBuffer);
+            audioBuffersRef.current[key] = trimmedBuffer;
+
+            // Create gain node for this audio
+            gainNodesRef.current[key] = audioContextRef.current.createGain();
+            gainNodesRef.current[key].gain.value = 0.2;
+            gainNodesRef.current[key].connect(
+              audioContextRef.current.destination
+            );
+
+            console.log(
+              `Audio ${key} loaded: ${trimmedBuffer.duration.toFixed(3)}s`
+            );
+          } catch (error) {
+            console.error(`Failed to load audio ${key}:`, error);
+            // Fallback to HTML5 audio
+            createFallbackAudio(url, key);
+          }
+        };
+
+        // Load all audio files
+        await Promise.all([
+          loadAudioBuffer("/music/playing.mp3", "playing"),
+          loadAudioBuffer("/music/break.mp3", "break"),
+          loadAudioBuffer("/music/overtime.mp3", "overtime"),
+        ]);
+
+        isInitializedRef.current = true;
+        console.log("Web Audio API initialized successfully");
+      } catch (error) {
+        console.error("Web Audio API initialization failed:", error);
+        initFallbackAudio();
+      }
+    };
+
+    // Trim silence from audio buffer
+    const trimSilence = (buffer) => {
+      const threshold = 0; // Silence threshold
+      const channelData = buffer.getChannelData(0);
+
+      // Find start of audio (first non-silent sample)
+      let start = 0;
+      for (let i = 0; i < channelData.length; i++) {
+        if (Math.abs(channelData[i]) > threshold) {
+          start = i;
+          break;
         }
-      });
+      }
+
+      // Find end of audio (last non-silent sample)
+      let end = channelData.length - 1;
+      for (let i = channelData.length - 1; i >= 0; i--) {
+        if (Math.abs(channelData[i]) > threshold) {
+          end = i;
+          break;
+        }
+      }
+
+      // Create new buffer with trimmed audio
+      const trimmedLength = end - start + 1;
+      const trimmedBuffer = audioContextRef.current.createBuffer(
+        buffer.numberOfChannels,
+        trimmedLength,
+        buffer.sampleRate
+      );
+
+      for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+        const originalData = buffer.getChannelData(channel);
+        const trimmedData = trimmedBuffer.getChannelData(channel);
+        for (let i = 0; i < trimmedLength; i++) {
+          trimmedData[i] = originalData[start + i];
+        }
+      }
+
+      return trimmedBuffer;
+    };
+
+    // Fallback to HTML5 audio if Web Audio API fails
+    const createFallbackAudio = (url, key) => {
+      const audio = new Audio(url);
+      audio.loop = true;
+      audio.volume = 0.2;
+      audio.preload = "auto";
+      audioBuffersRef.current[key] = { audio, isFallback: true };
+    };
+
+    const initFallbackAudio = () => {
+      console.log("Using HTML5 Audio fallback");
+      createFallbackAudio("/music/playing.mp3", "playing");
+      createFallbackAudio("/music/break.mp3", "break");
+      createFallbackAudio("/music/overtime.mp3", "overtime");
+      isInitializedRef.current = true;
+    };
+
+    initAudio();
+
+    return () => {
+      // Cleanup
+      stopAllAudio();
+      if (
+        audioContextRef.current &&
+        audioContextRef.current.state !== "closed"
+      ) {
+        audioContextRef.current.close();
+      }
     };
   }, []);
 
-  // Audio control function
-  const playAudio = (audioRef, shouldPlay = !isMuted) => {
-    if (shouldPlay && audioRef.current) {
-      // Stop all other audio first
-      stopAllAudio();
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch((error) => {
-        console.log("Audio playback failed:", error);
-      });
+  // Play audio with aggressive seamless looping
+  const playAudio = (audioKey, shouldPlay = !isMuted) => {
+    if (
+      !shouldPlay ||
+      !isInitializedRef.current ||
+      !audioBuffersRef.current[audioKey]
+    )
+      return;
+
+    // Stop all other audio first
+    stopAllAudio();
+
+    const buffer = audioBuffersRef.current[audioKey];
+
+    // Handle fallback audio
+    if (buffer.isFallback) {
+      buffer.audio.currentTime = 0;
+      buffer.audio.play().catch(console.error);
+      return;
     }
+
+    // Resume audio context if suspended
+    if (audioContextRef.current.state === "suspended") {
+      audioContextRef.current.resume();
+    }
+
+    // Create and start buffer source with perfect looping
+    const startSeamlessLoop = () => {
+      if (audioSourcesRef.current[audioKey]) {
+        audioSourcesRef.current[audioKey].stop();
+      }
+
+      const source = audioContextRef.current.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.loopStart = 0;
+      source.loopEnd = buffer.duration;
+
+      // Connect to gain node
+      source.connect(gainNodesRef.current[audioKey]);
+
+      // Start immediately
+      source.start(0);
+      audioSourcesRef.current[audioKey] = source;
+
+      console.log(`Started seamless loop for ${audioKey}`);
+    };
+
+    startSeamlessLoop();
   };
 
   const stopAllAudio = () => {
-    [
-      playingAudioRef.current,
-      breakAudioRef.current,
-      overtimeAudioRef.current,
-    ].forEach((audio) => {
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
+    Object.keys(audioSourcesRef.current).forEach((key) => {
+      const source = audioSourcesRef.current[key];
+      if (source) {
+        try {
+          source.stop();
+          source.disconnect();
+        } catch (error) {
+          // Source might already be stopped
+        }
+        delete audioSourcesRef.current[key];
+      }
+    });
+
+    // Stop fallback audio
+    Object.keys(audioBuffersRef.current).forEach((key) => {
+      const buffer = audioBuffersRef.current[key];
+      if (buffer && buffer.isFallback) {
+        buffer.audio.pause();
+        buffer.audio.currentTime = 0;
       }
     });
   };
@@ -118,21 +264,45 @@ export function TimerModal({
     setIsMuted(newMutedState);
 
     if (newMutedState) {
-      // Muting - stop all audio
       stopAllAudio();
     } else {
-      // Unmuting - resume appropriate audio based on current state
+      // Resume appropriate audio
       if (isRunning) {
         if (timeLeft === 0 && isOvertimeStarted) {
-          playAudio(overtimeAudioRef);
+          playAudio("overtime");
         } else if (isBreak) {
-          playAudio(breakAudioRef);
+          playAudio("break");
         } else if (timeLeft > 0) {
-          playAudio(playingAudioRef);
+          playAudio("playing");
         }
       }
     }
   };
+
+  // Handle user interaction requirement for audio
+  const handleFirstUserInteraction = () => {
+    if (
+      audioContextRef.current &&
+      audioContextRef.current.state === "suspended"
+    ) {
+      audioContextRef.current.resume();
+    }
+  };
+
+  // Add click listener for first user interaction
+  useEffect(() => {
+    document.addEventListener("click", handleFirstUserInteraction, {
+      once: true,
+    });
+    document.addEventListener("touchstart", handleFirstUserInteraction, {
+      once: true,
+    });
+
+    return () => {
+      document.removeEventListener("click", handleFirstUserInteraction);
+      document.removeEventListener("touchstart", handleFirstUserInteraction);
+    };
+  }, []);
 
   // Main countdown timer effect
   useEffect(() => {
@@ -147,10 +317,9 @@ export function TimerModal({
   // Overtime counter effect
   useEffect(() => {
     if (isRunning && timeLeft === 0) {
-      // Start overtime audio when entering overtime mode
       if (!isOvertimeStarted) {
         setIsOvertimeStarted(true);
-        playAudio(overtimeAudioRef); // Uses default mute check
+        playAudio("overtime");
       }
 
       const overtimeInterval = setInterval(() => {
@@ -193,11 +362,11 @@ export function TimerModal({
   useEffect(() => {
     if (isRunning && !isMuted) {
       if (timeLeft === 0) {
-        playAudio(overtimeAudioRef);
+        playAudio("overtime");
       } else if (isBreak) {
-        playAudio(breakAudioRef);
+        playAudio("break");
       } else {
-        playAudio(playingAudioRef);
+        playAudio("playing");
       }
     } else {
       stopAllAudio();
@@ -205,7 +374,6 @@ export function TimerModal({
         setIsOvertimeStarted(false);
       }
     }
-    // The dependency `timeLeft > 0` is a boolean that only changes when the timer hits zero.
   }, [isRunning, isBreak, timeLeft > 0, isMuted]);
 
   const formatTime = (seconds) => {

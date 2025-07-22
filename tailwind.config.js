@@ -10,6 +10,9 @@ const config = {
   ],
   theme: {
     extend: {
+      screens: {
+        sm: "460px",
+      },
       fontFamily: {
         nunito: "var(--font-nunito)",
         sans: "var(--font-nunito)",
