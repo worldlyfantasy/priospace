@@ -13,6 +13,7 @@ import { TaskOptionsModal } from "@/components/task-options-modal";
 import { HabitTracker } from "@/components/habit-tracker";
 import { TimerModal } from "@/components/timer-modal";
 import { SettingsModal } from "@/components/settings-modal";
+import { IntroScreen } from "@/components/intro-screen";
 
 export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
@@ -26,6 +27,7 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showIntroScreen, setShowIntroScreen] = useState(true);
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -59,6 +61,72 @@ export default function Home() {
       setHabits(JSON.parse(savedHabits));
     }
   }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (showIntroScreen) return;
+
+      const isEscapePressed = event.key === "Escape";
+
+      if (isEscapePressed) {
+        setShowAddTask(false);
+        setShowHabits(false);
+        setShowTimer(false);
+        setShowSettings(false);
+        setShowTaskOptions(false);
+        return;
+      }
+
+      if (
+        showAddTask ||
+        showHabits ||
+        showTimer ||
+        showSettings ||
+        showTaskOptions
+      ) {
+        return;
+      }
+
+      const isModifierPressed = event.ctrlKey || event.metaKey; // Ctrl for Windows/Linux, Cmd for Mac
+
+      if (isModifierPressed) {
+        switch (event.key.toLowerCase()) {
+          case "a": // Ctrl/Cmd + T for Add Task
+            event.preventDefault();
+            setShowAddTask(true);
+            break;
+          case "h": // Ctrl/Cmd + H for Habits
+            event.preventDefault();
+            setShowHabits(true);
+            break;
+          case "c": // Ctrl/Cmd + C for Timer
+            event.preventDefault();
+            setShowTimer(true);
+            break;
+          case "x": // Ctrl/Cmd + X for Settings
+            event.preventDefault();
+            setShowSettings(true);
+            break;
+          default:
+            break;
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    showAddTask,
+    showHabits,
+    showTimer,
+    showSettings,
+    showTaskOptions,
+    showIntroScreen,
+  ]);
 
   // Save to localStorage whenever data changes
   useEffect(() => {
@@ -355,160 +423,170 @@ export default function Home() {
   const allTasks = [...regularTasks, ...dailyHabitTasks];
 
   return (
-    <div className="min-h-screen transition-colors duration-300 bg-background">
-      <div className="max-w-lg mx-auto min-h-screen px-4 relative overflow-hidden">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-col h-screen relative"
-        >
-          <button
-            onClick={() => setShowSettings(true)}
-            className="absolute left-1/2 -translate-x-1/2 z-10 bg-primary text-background rounded-b-lg py-2 px-2 pt-1"
-          >
-            <Settings className="h-3 w-3" />
-          </button>
+    <>
+      <AnimatePresence>
+        {showIntroScreen && (
+          <IntroScreen onAnimationComplete={() => setShowIntroScreen(false)} />
+        )}
+      </AnimatePresence>
 
-          {/* Header Section */}
-          <div className="p-4 px-0 border-b border-dashed">
-            <div className="flex items-center justify-between">
-              <DayNightCycle selectedDate={selectedDate} />
-              <div className="flex items-center gap-2">
-                <div className="text-right flex flex-col">
-                  <div className="text-xl font-extrabold flex items-center gap-2">
-                    <AnimatedNumber
-                      value={selectedDate.getDate()}
-                      fontSize={20}
-                    />
-                    {selectedDate.toLocaleDateString("en-US", {
-                      month: "long",
-                    })}
-                  </div>
-                  <div className="text-xl opacity-90 -mt-1 flex justify-end">
-                    <AnimatedYear
-                      year={selectedDate.getFullYear()}
-                      fontSize={30}
-                    />
+      {!showIntroScreen && (
+        <div className="min-h-screen transition-colors duration-300 bg-background">
+          <div className="max-w-lg mx-auto min-h-screen px-4 relative overflow-hidden">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="flex flex-col h-screen relative"
+            >
+              <button
+                onClick={() => setShowSettings(true)}
+                className="absolute left-1/2 -translate-x-1/2 z-10 bg-primary text-background rounded-b-lg py-2 px-2 pt-1"
+              >
+                <Settings className="h-3 w-3" />
+              </button>
+
+              {/* Header Section */}
+              <div className="p-4 px-0 border-b border-dashed">
+                <div className="flex items-center justify-between">
+                  <DayNightCycle selectedDate={selectedDate} />
+                  <div className="flex items-center gap-2">
+                    <div className="text-right flex flex-col">
+                      <div className="text-xl font-extrabold flex items-center gap-2">
+                        <AnimatedNumber
+                          value={selectedDate.getDate()}
+                          fontSize={20}
+                        />
+                        {selectedDate.toLocaleDateString("en-US", {
+                          month: "long",
+                        })}
+                      </div>
+                      <div className="text-xl opacity-90 -mt-1 flex justify-end">
+                        <AnimatedYear
+                          year={selectedDate.getFullYear()}
+                          fontSize={30}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div className="py-3 border-b border-dashed">
-            <WeeklyCalendar
-              selectedDate={selectedDate}
-              onDateSelect={setSelectedDate}
-            />
-          </div>
+              <div className="py-3 border-b border-dashed">
+                <WeeklyCalendar
+                  selectedDate={selectedDate}
+                  onDateSelect={setSelectedDate}
+                />
+              </div>
 
-          <div className="flex-1 overflow-hidden">
-            <TaskList
-              tasks={allTasks}
-              customTags={customTags}
-              onToggleTask={toggleTask}
-              onDeleteTask={deleteTask}
-              onTaskClick={handleTaskClick}
-            />
-          </div>
+              <div className="flex-1 overflow-hidden">
+                <TaskList
+                  tasks={allTasks}
+                  customTags={customTags}
+                  onToggleTask={toggleTask}
+                  onDeleteTask={deleteTask}
+                  onTaskClick={handleTaskClick}
+                />
+              </div>
 
-          <div className="p-4 border-t border-dashed dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <Button
-                onClick={() => setShowTimer(true)}
-                variant="ghost"
-                size="lg"
-                className="flex-1 flex items-center justify-center px-4 sm:px-8 gap-2 font-extrabold hover:bg-primary/5 group dark:text-white"
-              >
-                <div className="group-hover:scale-110 transition-transform  flex items-center gap-2">
-                  <Timer className="h-5 w-5" />
-                  <span>Timer</span>
+              <div className="p-4 border-t border-dashed dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <Button
+                    onClick={() => setShowTimer(true)}
+                    variant="ghost"
+                    size="lg"
+                    className="flex-1 flex items-center justify-center px-4 sm:px-8 gap-2 font-extrabold hover:bg-primary/5 group dark:text-white"
+                  >
+                    <div className="group-hover:scale-110 transition-transform  flex items-center gap-2">
+                      <Timer className="h-5 w-5" />
+                      <span>Timer</span>
+                    </div>
+                  </Button>
+
+                  <Button
+                    onClick={() => setShowAddTask(true)}
+                    size="lg"
+                    className="mx-4 rounded-full w-12 h-12 px-4 sm:px-8 bg-primary hover:bg-primary/90 group hover:scale-110 transition-transform [&_svg]:size-5"
+                  >
+                    <Plus className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                  </Button>
+
+                  <Button
+                    onClick={() => setShowHabits(true)}
+                    variant="ghost"
+                    size="lg"
+                    className="flex-1 flex items-center justify-center px-4 sm:px-8 gap-2 font-extrabold hover:bg-primary/5 group dark:text-white"
+                  >
+                    <div className="group-hover:scale-110 transition-transform  flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5" />
+                      <span>Habits</span>
+                    </div>
+                  </Button>
                 </div>
-              </Button>
+              </div>
+            </motion.div>
 
-              <Button
-                onClick={() => setShowAddTask(true)}
-                size="lg"
-                className="mx-4 rounded-full w-12 h-12 px-4 sm:px-8 bg-primary hover:bg-primary/90 group hover:scale-110 transition-transform [&_svg]:size-5"
-              >
-                <Plus className="h-5 w-5 group-hover:scale-110 transition-transform" />
-              </Button>
+            <AnimatePresence>
+              {showSettings && (
+                <SettingsModal
+                  onClose={() => setShowSettings(false)}
+                  darkMode={darkMode}
+                  onToggleDarkMode={() => setDarkMode(!darkMode)}
+                  onExportData={exportData}
+                  onImportData={importData}
+                />
+              )}
 
-              <Button
-                onClick={() => setShowHabits(true)}
-                variant="ghost"
-                size="lg"
-                className="flex-1 flex items-center justify-center px-4 sm:px-8 gap-2 font-extrabold hover:bg-primary/5 group dark:text-white"
-              >
-                <div className="group-hover:scale-110 transition-transform  flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  <span>Habits</span>
-                </div>
-              </Button>
-            </div>
+              {showAddTask && (
+                <AddTaskModal
+                  onClose={() => setShowAddTask(false)}
+                  onAddTask={addTask}
+                  customTags={customTags}
+                  onAddCustomTag={addCustomTag}
+                />
+              )}
+
+              {showTaskOptions && selectedTask && (
+                <TaskOptionsModal
+                  task={selectedTask}
+                  customTags={customTags}
+                  onClose={() => {
+                    setShowTaskOptions(false);
+                    setSelectedTask(null);
+                  }}
+                  onUpdateTask={updateTask}
+                  onDeleteTask={deleteTask}
+                  onAddCustomTag={addCustomTag}
+                  onToggleTask={toggleTask}
+                  selectedDate={selectedDate}
+                  onTransferTask={transferTaskToCurrentDay}
+                  currentActualDate={new Date()}
+                />
+              )}
+
+              {showHabits && (
+                <HabitTracker
+                  habits={habits}
+                  customTags={customTags}
+                  onClose={() => setShowHabits(false)}
+                  onUpdateHabits={setHabits}
+                  onAddCustomTag={addCustomTag}
+                />
+              )}
+
+              {showTimer && (
+                <TimerModal
+                  tasks={allTasks}
+                  onClose={() => setShowTimer(false)}
+                  onUpdateTaskTime={updateTaskTime}
+                  onUpdateTaskFocusTime={updateTaskFocusTime}
+                  onToggleTask={toggleTask}
+                />
+              )}
+            </AnimatePresence>
           </div>
-        </motion.div>
-
-        <AnimatePresence>
-          {showSettings && (
-            <SettingsModal
-              onClose={() => setShowSettings(false)}
-              darkMode={darkMode}
-              onToggleDarkMode={() => setDarkMode(!darkMode)}
-              onExportData={exportData}
-              onImportData={importData}
-            />
-          )}
-
-          {showAddTask && (
-            <AddTaskModal
-              onClose={() => setShowAddTask(false)}
-              onAddTask={addTask}
-              customTags={customTags}
-              onAddCustomTag={addCustomTag}
-            />
-          )}
-
-          {showTaskOptions && selectedTask && (
-            <TaskOptionsModal
-              task={selectedTask}
-              customTags={customTags}
-              onClose={() => {
-                setShowTaskOptions(false);
-                setSelectedTask(null);
-              }}
-              onUpdateTask={updateTask}
-              onDeleteTask={deleteTask}
-              onAddCustomTag={addCustomTag}
-              onToggleTask={toggleTask}
-              selectedDate={selectedDate}
-              onTransferTask={transferTaskToCurrentDay}
-              currentActualDate={new Date()}
-            />
-          )}
-
-          {showHabits && (
-            <HabitTracker
-              habits={habits}
-              customTags={customTags}
-              onClose={() => setShowHabits(false)}
-              onUpdateHabits={setHabits}
-              onAddCustomTag={addCustomTag}
-            />
-          )}
-
-          {showTimer && (
-            <TimerModal
-              tasks={allTasks}
-              onClose={() => setShowTimer(false)}
-              onUpdateTaskTime={updateTaskTime}
-              onUpdateTaskFocusTime={updateTaskFocusTime}
-              onToggleTask={toggleTask}
-            />
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }

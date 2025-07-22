@@ -97,7 +97,6 @@ export function TaskOptionsModal({
     onClose();
   };
 
-  const currentTag = customTags.find((tag) => tag.id === task.tag);
   const isDifferentDay =
     task.createdAt.toDateString() !== currentActualDate.toDateString();
 

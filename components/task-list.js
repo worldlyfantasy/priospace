@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Check, Clock, RotateCcw } from "lucide-react";
 import { formatFocusTime } from "@/utils/time"; // Assuming this utility exists
@@ -15,12 +15,55 @@ export function TaskList({
   const [holdingTask, setHoldingTask] = useState(null);
   const [holdProgress, setHoldProgress] = useState(0);
 
+  // Audio refs for sound effects
+  const holdAudioRef = useRef(null);
+  const completeAudioRef = useRef(null);
+
+  // Initialize audio elements
+  if (typeof window !== "undefined") {
+    if (!holdAudioRef.current) {
+      holdAudioRef.current = new Audio("/music/hold.mp3");
+      holdAudioRef.current.volume = 0.5; // Adjust volume as needed
+    }
+    if (!completeAudioRef.current) {
+      completeAudioRef.current = new Audio("/music/complete.mp3");
+      completeAudioRef.current.volume = 0.3; // Adjust volume as needed
+    }
+  }
+
+  const playHoldSound = () => {
+    if (holdAudioRef.current) {
+      holdAudioRef.current.currentTime = 0; // Reset to beginning
+      holdAudioRef.current
+        .play()
+        .catch((e) => console.log("Hold sound play failed:", e));
+    }
+  };
+
+  const stopHoldSound = () => {
+    if (holdAudioRef.current) {
+      holdAudioRef.current.pause();
+      holdAudioRef.current.currentTime = 0;
+    }
+  };
+
+  const playCompleteSound = () => {
+    if (completeAudioRef.current) {
+      completeAudioRef.current.currentTime = 0; // Reset to beginning
+      completeAudioRef.current
+        .play()
+        .catch((e) => console.log("Complete sound play failed:", e));
+    }
+  };
+
   const handleMouseDown = (taskId, event) => {
     event.preventDefault();
     const task = tasks.find((t) => t.id === taskId);
     if (task?.completed) return;
 
     setHoldingTask(taskId);
+    playHoldSound(); // Play hold sound when starting to hold
+
     let progress = 0;
     let holdCompleted = false;
     let animationFrameId;
@@ -31,6 +74,8 @@ export function TaskList({
       if (progress >= 100) {
         cancelAnimationFrame(animationFrameId);
         holdCompleted = true;
+        stopHoldSound(); // Stop hold sound
+        playCompleteSound(); // Play complete sound
         onToggleTask(taskId);
         setHoldingTask(null);
         setHoldProgress(0);
@@ -43,6 +88,7 @@ export function TaskList({
 
     const cleanup = () => {
       cancelAnimationFrame(animationFrameId);
+      stopHoldSound(); // Stop hold sound if releasing early
       setHoldingTask(null);
       setHoldProgress(0);
       event.target.holdCompleted = holdCompleted;
