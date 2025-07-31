@@ -10,6 +10,7 @@ import { Timer, Plus, BarChart3, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddTaskModal } from "@/components/add-task-modal";
 import { TaskOptionsModal } from "@/components/task-options-modal";
+import { AddSubtaskModal } from "@/components/add-subtask-modal";
 import { HabitTracker } from "@/components/habit-tracker";
 import { TimerModal } from "@/components/timer-modal";
 import { SettingsModal } from "@/components/settings-modal";
@@ -17,6 +18,7 @@ import { IntroScreen } from "@/components/intro-screen";
 
 export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
+  const [theme, setTheme] = useState("default");
   const [dailyTasks, setDailyTasks] = useState({});
   const [customTags, setCustomTags] = useState([]);
   const [habits, setHabits] = useState([]);
@@ -24,10 +26,12 @@ export default function Home() {
   const [showHabits, setShowHabits] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
   const [showTaskOptions, setShowTaskOptions] = useState(false);
+  const [showAddSubtask, setShowAddSubtask] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showIntroScreen, setShowIntroScreen] = useState(true);
+  const [parentTaskForSubtask, setParentTaskForSubtask] = useState(null);
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -36,17 +40,39 @@ export default function Home() {
       setDarkMode(JSON.parse(savedDarkMode));
     }
 
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
+
     const savedDailyTasks = localStorage.getItem("dailyTasks");
     if (savedDailyTasks) {
       const parsed = JSON.parse(savedDailyTasks);
-      // Convert date strings back to Date objects and ensure focusTime exists
+      // Convert date strings back to Date objects and ensure all fields exist
       const converted = {};
       Object.keys(parsed).forEach((dateKey) => {
-        converted[dateKey] = parsed[dateKey].map((task) => ({
-          ...task,
-          createdAt: new Date(task.createdAt),
-          focusTime: task.focusTime || 0, // Ensure focusTime exists for backward compatibility
-        }));
+        converted[dateKey] = parsed[dateKey].map((task) => {
+          // Ensure subtasks are properly structured
+          const processedSubtasks = (task.subtasks || []).map((subtask) => ({
+            ...subtask,
+            createdAt: new Date(subtask.createdAt || task.createdAt),
+            focusTime: subtask.focusTime || 0,
+            timeSpent: subtask.timeSpent || 0,
+            completed: !!subtask.completed,
+            parentTaskId: task.id,
+            subtasks: [], // Subtasks don't have their own subtasks
+          }));
+
+          return {
+            ...task,
+            createdAt: new Date(task.createdAt),
+            focusTime: task.focusTime || 0,
+            timeSpent: task.timeSpent || 0,
+            completed: !!task.completed,
+            subtasks: processedSubtasks,
+            subtasksExpanded: task.subtasksExpanded || false,
+          };
+        });
       });
       setDailyTasks(converted);
     }
@@ -62,6 +88,26 @@ export default function Home() {
     }
   }, []);
 
+  // Apply theme classes to document
+  useEffect(() => {
+    const root = document.documentElement;
+
+    // Remove all theme classes
+    root.classList.remove("theme-nature", "theme-neo-brutal", "theme-modern");
+
+    // Add current theme class (except for default)
+    if (theme !== "default") {
+      root.classList.add(`theme-${theme}`);
+    }
+
+    // Handle dark mode
+    if (darkMode) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, [theme, darkMode]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -75,6 +121,7 @@ export default function Home() {
         setShowTimer(false);
         setShowSettings(false);
         setShowTaskOptions(false);
+        setShowAddSubtask(false);
         return;
       }
 
@@ -83,7 +130,8 @@ export default function Home() {
         showHabits ||
         showTimer ||
         showSettings ||
-        showTaskOptions
+        showTaskOptions ||
+        showAddSubtask
       ) {
         return;
       }
@@ -92,7 +140,7 @@ export default function Home() {
 
       if (isModifierPressed) {
         switch (event.key.toLowerCase()) {
-          case "a": // Ctrl/Cmd + T for Add Task
+          case "a": // Ctrl/Cmd + A for Add Task
             event.preventDefault();
             setShowAddTask(true);
             break;
@@ -125,6 +173,7 @@ export default function Home() {
     showTimer,
     showSettings,
     showTaskOptions,
+    showAddSubtask,
     showIntroScreen,
   ]);
 
@@ -132,6 +181,10 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem("darkMode", JSON.stringify(darkMode));
   }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem("theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     localStorage.setItem("dailyTasks", JSON.stringify(dailyTasks));
@@ -144,14 +197,6 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem("habits", JSON.stringify(habits));
   }, [habits]);
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [darkMode]);
 
   const getDateString = (date) => {
     const year = date.getFullYear();
@@ -177,7 +222,61 @@ export default function Home() {
       isHabit: true,
       habitId: habit.id,
       tag: habit.tag,
+      subtasks: [], // Habits don't have subtasks
     }));
+  };
+
+  // Helper function to find a task by ID (including subtasks)
+  const findTaskById = (taskId, taskList = null) => {
+    const tasksToSearch = taskList || getCurrentDayTasks();
+
+    for (const task of tasksToSearch) {
+      if (task.id === taskId) {
+        return task;
+      }
+      // Search in subtasks
+      if (task.subtasks && task.subtasks.length > 0) {
+        for (const subtask of task.subtasks) {
+          if (subtask.id === taskId) {
+            return subtask;
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  // Helper function to update a task (including subtasks)
+  const updateTaskInList = (taskId, updates, taskList) => {
+    return taskList.map((task) => {
+      if (task.id === taskId) {
+        return { ...task, ...updates };
+      }
+      // Update subtasks
+      if (task.subtasks && task.subtasks.length > 0) {
+        const updatedSubtasks = task.subtasks.map((subtask) =>
+          subtask.id === taskId ? { ...subtask, ...updates } : subtask
+        );
+        return { ...task, subtasks: updatedSubtasks };
+      }
+      return task;
+    });
+  };
+
+  // Helper function to remove a task (including subtasks)
+  const removeTaskFromList = (taskId, taskList) => {
+    return taskList
+      .map((task) => {
+        // Remove from subtasks
+        if (task.subtasks && task.subtasks.length > 0) {
+          const filteredSubtasks = task.subtasks.filter(
+            (subtask) => subtask.id !== taskId
+          );
+          return { ...task, subtasks: filteredSubtasks };
+        }
+        return task;
+      })
+      .filter((task) => task.id !== taskId); // Remove main task
   };
 
   const toggleTask = (id) => {
@@ -185,7 +284,7 @@ export default function Home() {
     const currentTasks = getCurrentDayTasks();
     const dailyHabitTasks = generateDailyHabitTasks(habits, selectedDate);
     const allTasks = [...currentTasks, ...dailyHabitTasks];
-    const task = allTasks.find((t) => t.id === id);
+    const task = findTaskById(id, allTasks);
 
     if (task?.isHabit && task.habitId) {
       // Handle habit completion
@@ -200,9 +299,11 @@ export default function Home() {
       });
       setHabits(updatedHabits);
     } else {
-      // Handle regular task completion
-      const updatedTasks = currentTasks.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
+      // Handle regular task/subtask completion
+      const updatedTasks = updateTaskInList(
+        id,
+        { completed: !task.completed },
+        currentTasks
       );
       setDailyTasks({ ...dailyTasks, [dateString]: updatedTasks });
     }
@@ -216,11 +317,69 @@ export default function Home() {
       title,
       completed: false,
       timeSpent: 0,
-      focusTime: 0, // Initialize focus time
+      focusTime: 0,
       createdAt: selectedDate,
       tag: tagId,
+      subtasks: [], // Initialize empty subtasks array
+      subtasksExpanded: false, // Initialize expansion state
     };
     setDailyTasks({ ...dailyTasks, [dateString]: [...currentTasks, newTask] });
+  };
+
+  const addSubtask = (parentTaskId, title, tagId) => {
+    const dateString = getDateString(selectedDate);
+    const currentTasks = getCurrentDayTasks();
+
+    const newSubtask = {
+      id: `${parentTaskId}-subtask-${Date.now()}`,
+      title,
+      completed: false,
+      timeSpent: 0,
+      focusTime: 0,
+      createdAt: selectedDate,
+      tag: tagId,
+      parentTaskId,
+      subtasks: [], // Subtasks can't have their own subtasks
+    };
+
+    const updatedTasks = currentTasks.map((task) => {
+      if (task.id === parentTaskId) {
+        const currentSubtasks = task.subtasks || [];
+        return {
+          ...task,
+          subtasks: [...currentSubtasks, newSubtask],
+          subtasksExpanded: true, // Auto-expand when adding subtask
+        };
+      }
+      return task;
+    });
+
+    setDailyTasks({ ...dailyTasks, [dateString]: updatedTasks });
+  };
+
+  const handleAddSubtask = (parentTaskId) => {
+    const parentTask = findTaskById(parentTaskId);
+    if (parentTask && !parentTask.isHabit) {
+      // Ensure the parent task has subtasks array initialized
+      const dateString = getDateString(selectedDate);
+      const currentTasks = getCurrentDayTasks();
+
+      // Update parent task to ensure subtasks array exists
+      const updatedTasks = currentTasks.map((task) => {
+        if (task.id === parentTaskId) {
+          return {
+            ...task,
+            subtasks: task.subtasks || [], // Ensure subtasks array exists
+            subtasksExpanded: true, // Pre-expand for adding
+          };
+        }
+        return task;
+      });
+
+      setDailyTasks({ ...dailyTasks, [dateString]: updatedTasks });
+      setParentTaskForSubtask(parentTask);
+      setShowAddSubtask(true);
+    }
   };
 
   const updateTask = (taskId, updates) => {
@@ -246,10 +405,8 @@ export default function Home() {
         setHabits(updatedHabits);
       }
     } else {
-      // Regular task update
-      const updatedTasks = currentTasks.map((task) =>
-        task.id === taskId ? { ...task, ...updates } : task
-      );
+      // Regular task/subtask update
+      const updatedTasks = updateTaskInList(taskId, updates, currentTasks);
       setDailyTasks({ ...dailyTasks, [dateString]: updatedTasks });
     }
   };
@@ -264,8 +421,8 @@ export default function Home() {
       const updatedHabits = habits.filter((habit) => habit.id !== habitId);
       setHabits(updatedHabits);
     } else {
-      // Regular task deletion
-      const updatedTasks = currentTasks.filter((task) => task.id !== id);
+      // Regular task/subtask deletion
+      const updatedTasks = removeTaskFromList(id, currentTasks);
       setDailyTasks({ ...dailyTasks, [dateString]: updatedTasks });
     }
   };
@@ -273,8 +430,12 @@ export default function Home() {
   const updateTaskTime = (id, timeToAdd) => {
     const dateString = getDateString(selectedDate);
     const currentTasks = getCurrentDayTasks();
-    const updatedTasks = currentTasks.map((task) =>
-      task.id === id ? { ...task, timeSpent: task.timeSpent + timeToAdd } : task
+    const updatedTasks = updateTaskInList(
+      id,
+      {
+        timeSpent: (findTaskById(id, currentTasks)?.timeSpent || 0) + timeToAdd,
+      },
+      currentTasks
     );
     setDailyTasks({ ...dailyTasks, [dateString]: updatedTasks });
   };
@@ -293,11 +454,9 @@ export default function Home() {
 
       // Find the task in its original day
       const originalDayTasks = newDailyTasks[originalDateString] || [];
-      const taskToTransferIndex = originalDayTasks.findIndex(
-        (t) => t.id === taskId
-      );
+      const taskToTransfer = findTaskById(taskId, originalDayTasks);
 
-      if (taskToTransferIndex === -1) {
+      if (!taskToTransfer) {
         console.warn(
           "Task not found for transfer:",
           taskId,
@@ -306,7 +465,9 @@ export default function Home() {
         return prevDailyTasks; // Task not found, return original state
       }
 
-      const [taskToTransfer] = originalDayTasks.splice(taskToTransferIndex, 1);
+      // Remove task from original day
+      const updatedOriginalTasks = removeTaskFromList(taskId, originalDayTasks);
+      newDailyTasks[originalDateString] = updatedOriginalTasks;
 
       // Update the task's properties for the new day
       const updatedTask = {
@@ -315,6 +476,14 @@ export default function Home() {
         completed: false, // Reset completion status
         timeSpent: 0, // Reset time spent
         focusTime: 0, // Reset focus time
+        // Reset subtasks completion and time
+        subtasks: (taskToTransfer.subtasks || []).map((subtask) => ({
+          ...subtask,
+          completed: false,
+          timeSpent: 0,
+          focusTime: 0,
+          createdAt: targetDate,
+        })),
       };
 
       // Add to the current day's tasks
@@ -335,10 +504,13 @@ export default function Home() {
   const updateTaskFocusTime = (id, focusTimeToAdd) => {
     const dateString = getDateString(selectedDate);
     const currentTasks = getCurrentDayTasks();
-    const updatedTasks = currentTasks.map((task) =>
-      task.id === id
-        ? { ...task, focusTime: task.focusTime + focusTimeToAdd }
-        : task
+    const updatedTasks = updateTaskInList(
+      id,
+      {
+        focusTime:
+          (findTaskById(id, currentTasks)?.focusTime || 0) + focusTimeToAdd,
+      },
+      currentTasks
     );
     setDailyTasks({ ...dailyTasks, [dateString]: updatedTasks });
   };
@@ -364,8 +536,9 @@ export default function Home() {
       customTags,
       habits,
       darkMode,
+      theme,
       exportDate: new Date().toISOString(),
-      version: "2.0", // Add version for future compatibility
+      version: "3.0", // Update version for subtasks support
     };
     const dataStr = JSON.stringify(data, null, 2);
     const dataBlob = new Blob([dataStr], { type: "application/json" });
@@ -395,13 +568,25 @@ export default function Home() {
           try {
             const data = JSON.parse(e.target?.result);
             if (data.dailyTasks) {
-              // Convert date strings back to Date objects and ensure focusTime exists
+              // Convert date strings back to Date objects and ensure backward compatibility
               const converted = {};
               Object.keys(data.dailyTasks).forEach((dateKey) => {
                 converted[dateKey] = data.dailyTasks[dateKey].map((task) => ({
                   ...task,
                   createdAt: new Date(task.createdAt),
-                  focusTime: task.focusTime || 0, // Ensure focusTime exists for backward compatibility
+                  focusTime: task.focusTime || 0, // Ensure focusTime exists
+                  subtasks: task.subtasks || [], // Ensure subtasks array exists
+                  subtasksExpanded: task.subtasksExpanded || false, // Ensure expansion state exists
+                  // For subtasks, ensure they have the required fields
+                  ...(task.subtasks && {
+                    subtasks: task.subtasks.map((subtask) => ({
+                      ...subtask,
+                      createdAt: new Date(subtask.createdAt || task.createdAt),
+                      focusTime: subtask.focusTime || 0,
+                      timeSpent: subtask.timeSpent || 0,
+                      subtasks: [], // Subtasks don't have their own subtasks
+                    })),
+                  }),
                 }));
               });
               setDailyTasks(converted);
@@ -409,6 +594,7 @@ export default function Home() {
             if (data.customTags) setCustomTags(data.customTags);
             if (data.habits) setHabits(data.habits);
             if (typeof data.darkMode === "boolean") setDarkMode(data.darkMode);
+            if (data.theme) setTheme(data.theme);
             alert("Data imported successfully!");
             setShowSettings(false); // Close settings after import
           } catch (error) {
@@ -421,9 +607,22 @@ export default function Home() {
     input.click();
   };
 
+  // Create flattened task list for components that need all tasks
+  const createFlatTaskList = (tasks) => {
+    const flatList = [];
+    tasks.forEach((task) => {
+      flatList.push(task);
+      if (task.subtasks && task.subtasks.length > 0) {
+        flatList.push(...task.subtasks);
+      }
+    });
+    return flatList;
+  };
+
   const dailyHabitTasks = generateDailyHabitTasks(habits, selectedDate);
   const regularTasks = getCurrentDayTasks();
   const allTasks = [...regularTasks, ...dailyHabitTasks];
+  const flatTaskList = createFlatTaskList(allTasks); // For timer and other components
 
   return (
     <>
@@ -489,6 +688,7 @@ export default function Home() {
                   onToggleTask={toggleTask}
                   onDeleteTask={deleteTask}
                   onTaskClick={handleTaskClick}
+                  onAddSubtask={handleAddSubtask}
                 />
               </div>
 
@@ -498,7 +698,7 @@ export default function Home() {
                     onClick={() => setShowTimer(true)}
                     variant="ghost"
                     size="lg"
-                    className="flex-1 flex items-center justify-center px-4 sm:px-8 gap-2 font-extrabold hover:bg-primary/5 group dark:text-white"
+                    className="flex-1 flex items-center justify-center px-4 sm:px-8 gap-2 font-extrabold hover:bg-accent/50 group dark:text-white"
                   >
                     <div className="group-hover:scale-110 transition-transform  flex items-center gap-2">
                       <Timer className="h-5 w-5" />
@@ -518,7 +718,7 @@ export default function Home() {
                     onClick={() => setShowHabits(true)}
                     variant="ghost"
                     size="lg"
-                    className="flex-1 flex items-center justify-center px-4 sm:px-8 gap-2 font-extrabold hover:bg-primary/5 group dark:text-white"
+                    className="flex-1 flex items-center justify-center px-4 sm:px-8 gap-2 font-extrabold group hover:bg-accent/50 dark:text-white"
                   >
                     <div className="group-hover:scale-110 transition-transform  flex items-center gap-2">
                       <BarChart3 className="h-5 w-5" />
@@ -535,6 +735,8 @@ export default function Home() {
                   onClose={() => setShowSettings(false)}
                   darkMode={darkMode}
                   onToggleDarkMode={() => setDarkMode(!darkMode)}
+                  theme={theme}
+                  onThemeChange={setTheme}
                   onExportData={exportData}
                   onImportData={importData}
                 />
@@ -546,6 +748,21 @@ export default function Home() {
                   onAddTask={addTask}
                   customTags={customTags}
                   onAddCustomTag={addCustomTag}
+                />
+              )}
+
+              {showAddSubtask && parentTaskForSubtask && (
+                <AddSubtaskModal
+                  onClose={() => {
+                    setShowAddSubtask(false);
+                    setParentTaskForSubtask(null);
+                  }}
+                  onAddSubtask={(title, tagId) => {
+                    addSubtask(parentTaskForSubtask.id, title, tagId);
+                  }}
+                  customTags={customTags}
+                  onAddCustomTag={addCustomTag}
+                  parentTask={parentTaskForSubtask}
                 />
               )}
 
@@ -564,6 +781,8 @@ export default function Home() {
                   selectedDate={selectedDate}
                   onTransferTask={transferTaskToCurrentDay}
                   currentActualDate={new Date()}
+                  onAddSubtask={handleAddSubtask}
+                  allTasks={allTasks}
                 />
               )}
 
@@ -579,7 +798,7 @@ export default function Home() {
 
               {showTimer && (
                 <TimerModal
-                  tasks={allTasks}
+                  tasks={flatTaskList} // Use flattened list for timer
                   onClose={() => setShowTimer(false)}
                   onUpdateTaskTime={updateTaskTime}
                   onUpdateTaskFocusTime={updateTaskFocusTime}

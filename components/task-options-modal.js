@@ -12,6 +12,8 @@ import {
   Settings,
   Save,
   ArrowRight,
+  List,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +49,8 @@ export function TaskOptionsModal({
   selectedDate,
   onTransferTask,
   currentActualDate,
+  onAddSubtask,
+  allTasks,
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
@@ -54,6 +58,11 @@ export function TaskOptionsModal({
   const [showAddTag, setShowAddTag] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
+  const [showSubtasks, setShowSubtasks] = useState(false);
+
+  // Get subtasks for this task
+  const subtasks = task.subtasks || [];
+  const isSubtask = !!task.parentTaskId;
 
   const handleComplete = () => {
     if (onToggleTask) {
@@ -94,6 +103,11 @@ export function TaskOptionsModal({
 
   const handleTransfer = () => {
     onTransferTask(task.id, task.createdAt, currentActualDate);
+    onClose();
+  };
+
+  const handleAddSubtask = () => {
+    onAddSubtask(task.id);
     onClose();
   };
 
@@ -207,6 +221,58 @@ export function TaskOptionsModal({
     tap: { scale: 0.95 },
   };
 
+  const ThemePreview = ({ themeData, isSelected, onClick }) => (
+    <motion.button
+      onClick={onClick}
+      className={`relative w-full p-4 rounded-xl border-2 transition-all duration-200 ${
+        isSelected
+          ? "border-primary bg-primary/5"
+          : "border-gray-200 dark:border-gray-700 hover:border-primary/50"
+      }`}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      <div className="flex items-center gap-3">
+        {/* Theme Preview */}
+        <div className="flex gap-1">
+          <div
+            className="w-4 h-8 rounded-sm"
+            style={{ backgroundColor: themeData.preview.primary }}
+          />
+          <div
+            className="w-4 h-8 rounded-sm"
+            style={{ backgroundColor: themeData.preview.secondary }}
+          />
+          <div
+            className="w-4 h-8 rounded-sm border border-gray-300"
+            style={{ backgroundColor: themeData.preview.background }}
+          />
+        </div>
+
+        {/* Theme Info */}
+        <div className="flex-1 text-left">
+          <div className="font-extrabold text-gray-900 dark:text-gray-100">
+            {themeData.name}
+          </div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+            {themeData.description}
+          </div>
+        </div>
+
+        {/* Selected Indicator */}
+        {isSelected && (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="w-6 h-6 bg-primary rounded-full flex items-center justify-center"
+          >
+            <Check className="h-4 w-4 text-primary-foreground" />
+          </motion.div>
+        )}
+      </div>
+    </motion.button>
+  );
+
   return (
     <motion.div
       variants={backdropVariants}
@@ -253,9 +319,16 @@ export function TaskOptionsModal({
               >
                 <Settings className="h-5 w-5 text-primary" />
               </motion.div>
-              <h2 className="text-2xl font-extrabold text-gray-900 dark:text-gray-100 tracking-wide">
-                Options
-              </h2>
+              <div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-gray-100 tracking-wide">
+                  Options
+                </h2>
+                {isSubtask && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                    Subtask
+                  </p>
+                )}
+              </div>
             </div>
             <Button
               variant="ghost"
@@ -338,6 +411,93 @@ export function TaskOptionsModal({
                     {customTags.find((tag) => tag.id === selectedTag)?.name}
                   </span>
                 </div>
+              </motion.div>
+            )}
+
+            {/* Subtasks Section - Only show for main tasks */}
+            {!isSubtask && !task.isHabit && (
+              <motion.div variants={itemVariants} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-extrabold text-gray-700 dark:text-gray-200 uppercase tracking-wider flex items-center gap-2">
+                    <List className="h-4 w-4" />
+                    Subtasks ({subtasks.length})
+                  </label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowSubtasks(!showSubtasks)}
+                    className="p-2"
+                  >
+                    <ChevronRight
+                      className={`h-4 w-4 transition-transform ${
+                        showSubtasks ? "rotate-90" : ""
+                      }`}
+                    />
+                  </Button>
+                </div>
+
+                <AnimatePresence>
+                  {showSubtasks && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-2"
+                    >
+                      {subtasks.length > 0 ? (
+                        <div className="space-y-2 p-3 bg-gray-50 dark:bg-gray-800/80 rounded-xl border-2 border-gray-200 dark:border-gray-700">
+                          {subtasks.map((subtask) => (
+                            <div
+                              key={subtask.id}
+                              className="flex items-center gap-3 p-2 bg-white dark:bg-gray-700 rounded-lg"
+                            >
+                              <div
+                                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                                  subtask.completed
+                                    ? "bg-primary border-primary"
+                                    : "border-gray-300 dark:border-gray-500"
+                                }`}
+                              >
+                                {subtask.completed && (
+                                  <Check className="h-2.5 w-2.5 text-white" />
+                                )}
+                              </div>
+                              <span
+                                className={`font-medium flex-1 ${
+                                  subtask.completed
+                                    ? "line-through text-gray-500"
+                                    : "text-gray-900 dark:text-gray-100"
+                                }`}
+                              >
+                                {subtask.title}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-center">
+                          <p className="text-gray-500 dark:text-gray-400 font-medium">
+                            No subtasks yet
+                          </p>
+                        </div>
+                      )}
+
+                      <motion.div
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                      >
+                        <Button
+                          onClick={handleAddSubtask}
+                          variant="outline"
+                          className="w-full border-2 border-gray-300 font-extrabold hover:border-primary/70 dark:border-gray-600 dark:hover:border-primary/80 dark:text-gray-100 rounded-xl py-3"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Subtask
+                        </Button>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             )}
 
@@ -501,7 +661,7 @@ export function TaskOptionsModal({
                 </Button>
               </motion.div>
 
-              {isDifferentDay && !task.isHabit && (
+              {isDifferentDay && !task.isHabit && !isSubtask && (
                 <Button
                   onClick={handleTransfer}
                   className="w-full bg-transparent rounded-xl font-extrabold text-lg"
@@ -524,7 +684,7 @@ export function TaskOptionsModal({
                     className="w-full rounded-xl font-extrabold py-4 text-lg shadow-lg"
                   >
                     <Trash2 className="h-5 w-5 mr-2" />
-                    Delete Task
+                    Delete {isSubtask ? "Subtask" : "Task"}
                   </Button>
                 </motion.div>
               )}

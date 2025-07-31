@@ -10,6 +10,8 @@ import {
   Settings,
   Heart,
   ExternalLink,
+  Palette,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -19,7 +21,52 @@ export function SettingsModal({
   onToggleDarkMode,
   onExportData,
   onImportData,
+  theme,
+  onThemeChange,
 }) {
+  const themes = [
+    {
+      id: "default",
+      name: "Default",
+      description: "Classic warm tones",
+      preview: {
+        primary: "#8B4B3C",
+        secondary: "#B8906B",
+        background: "#F5F1EB",
+      },
+    },
+    {
+      id: "nature",
+      name: "Nature",
+      description: "Fresh green vibes",
+      preview: {
+        primary: "#2D5A1B",
+        secondary: "#6BA341",
+        background: "#F7FAF5",
+      },
+    },
+    {
+      id: "neo-brutal",
+      name: "Neo Brutal",
+      description: "Bold and striking",
+      preview: {
+        primary: "#FF0000",
+        secondary: "#FFFF00",
+        background: "#FFFFFF",
+      },
+    },
+    {
+      id: "modern",
+      name: "Modern",
+      description: "Clean and minimal",
+      preview: {
+        primary: "#171717",
+        secondary: "#F5F5F5",
+        background: "#FFFFFF",
+      },
+    },
+  ];
+
   // Animation variants
   const backdropVariants = {
     hidden: { opacity: 0 },
@@ -89,6 +136,58 @@ export function SettingsModal({
     window.open("https://x.com/Anoyroyc", "_blank");
   };
 
+  const ThemePreview = ({ themeData, isSelected, onClick }) => (
+    <motion.button
+      onClick={onClick}
+      className={`relative w-full p-4 rounded-xl border-2 transition-all duration-200 ${
+        isSelected
+          ? "border-primary bg-primary/5"
+          : "border-gray-200 dark:border-gray-700 hover:border-primary/50"
+      }`}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      <div className="flex items-center gap-3">
+        {/* Theme Preview */}
+        <div className="flex gap-1">
+          <div
+            className="w-4 h-8 rounded-sm"
+            style={{ backgroundColor: themeData.preview.primary }}
+          />
+          <div
+            className="w-4 h-8 rounded-sm"
+            style={{ backgroundColor: themeData.preview.secondary }}
+          />
+          <div
+            className="w-4 h-8 rounded-sm border border-gray-300"
+            style={{ backgroundColor: themeData.preview.background }}
+          />
+        </div>
+
+        {/* Theme Info */}
+        <div className="flex-1 text-left">
+          <div className="font-extrabold text-gray-900 dark:text-gray-100">
+            {themeData.name}
+          </div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+            {themeData.description}
+          </div>
+        </div>
+
+        {/* Selected Indicator */}
+        {isSelected && (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="w-6 h-6 bg-primary rounded-full flex items-center justify-center"
+          >
+            <Check className="h-4 w-4 text-primary-foreground" />
+          </motion.div>
+        )}
+      </div>
+    </motion.button>
+  );
+
   return (
     <motion.div
       variants={backdropVariants}
@@ -155,6 +254,68 @@ export function SettingsModal({
             animate="visible"
             className="space-y-4"
           >
+            {/* Theme Selection */}
+            <motion.div variants={itemVariants}>
+              <div className="flex items-center justify-between p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80">
+                <div className="flex items-center gap-3">
+                  <Palette className="h-5 w-5 text-primary" />
+                  <div>
+                    <div className="font-extrabold text-gray-900 dark:text-gray-100">
+                      Theme
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                      Choose your style
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {themes.map((themeData) => (
+                    <motion.button
+                      key={themeData.id}
+                      onClick={() => onThemeChange(themeData.id)}
+                      className={`relative rounded-lg border-2 p-1 transition-all duration-200 ${
+                        theme === themeData.id
+                          ? "border-primary scale-110"
+                          : "border-gray-300 dark:border-gray-600 hover:border-primary/50"
+                      }`}
+                      whileHover={{
+                        scale: theme === themeData.id ? 1.1 : 1.05,
+                      }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <div className="flex gap-0.5">
+                        <div
+                          className="w-2 h-6 rounded-sm"
+                          style={{ backgroundColor: themeData.preview.primary }}
+                        />
+                        <div
+                          className="w-2 h-6 rounded-sm"
+                          style={{
+                            backgroundColor: themeData.preview.secondary,
+                          }}
+                        />
+                        <div
+                          className="w-2 h-6 rounded-sm border border-gray-300"
+                          style={{
+                            backgroundColor: themeData.preview.background,
+                          }}
+                        />
+                      </div>
+                      {theme === themeData.id && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full flex items-center justify-center"
+                        >
+                          <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                        </motion.div>
+                      )}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+
             {/* Dark Mode Toggle */}
             <motion.div variants={itemVariants}>
               <div className="flex items-center justify-between p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80">
