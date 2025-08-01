@@ -40,7 +40,7 @@ export function WebRTCShareModal({
   const [receivedData, setReceivedData] = useState(null);
   const [showReceivedData, setShowReceivedData] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [serverUrl, setServerUrl] = useState("ws://api.prio.space");
+  const [serverUrl, setServerUrl] = useState("wss://api.prio.space");
   const [showServerConfig, setShowServerConfig] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
@@ -520,7 +520,7 @@ export function WebRTCShareModal({
                   <Input
                     value={serverUrl}
                     onChange={(e) => setServerUrl(e.target.value)}
-                    placeholder="ws://api.prio.space"
+                    placeholder="wss://api.prio.space"
                     className="border-2 border-gray-300 font-medium focus:border-primary/70 dark:border-gray-600 dark:focus:border-primary/80 dark:text-gray-100 rounded-xl bg-white dark:bg-gray-800 py-3"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 font-medium">

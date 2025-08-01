@@ -133,7 +133,8 @@ export default function Home() {
         showTimer ||
         showSettings ||
         showTaskOptions ||
-        showAddSubtask
+        showAddSubtask ||
+        showWebRTCShare
       ) {
         return;
       }
@@ -176,6 +177,7 @@ export default function Home() {
     showSettings,
     showTaskOptions,
     showAddSubtask,
+    showWebRTCShare,
     showIntroScreen,
   ]);
 
