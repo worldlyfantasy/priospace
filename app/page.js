@@ -15,6 +15,7 @@ import { HabitTracker } from "@/components/habit-tracker";
 import { TimerModal } from "@/components/timer-modal";
 import { SettingsModal } from "@/components/settings-modal";
 import { IntroScreen } from "@/components/intro-screen";
+import { WebRTCShareModal } from "@/components/webrtc-share-modal";
 
 export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
@@ -32,6 +33,7 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showIntroScreen, setShowIntroScreen] = useState(true);
   const [parentTaskForSubtask, setParentTaskForSubtask] = useState(null);
+  const [showWebRTCShare, setShowWebRTCShare] = useState(false);
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -224,6 +226,295 @@ export default function Home() {
       tag: habit.tag,
       subtasks: [], // Habits don't have subtasks
     }));
+  };
+
+  const importDataFromWebRTC = (data) => {
+    try {
+      let importStats = {
+        newTasks: 0,
+        newSubtasks: 0,
+        newTags: 0,
+        newHabits: 0,
+        updatedSettings: [],
+      };
+
+      // Create tag mapping for imported data
+      const tagMapping = new Map(); // oldTagId -> newTagId
+
+      // 1. Merge Custom Tags FIRST (we need the mapping for tasks)
+      if (data.customTags) {
+        setCustomTags((prevTags) => {
+          const newTags = [];
+
+          data.customTags.forEach((incomingTag) => {
+            const existingTag = prevTags.find(
+              (existing) =>
+                existing.name.toLowerCase() === incomingTag.name.toLowerCase()
+            );
+
+            if (existingTag) {
+              // Tag exists, map old ID to existing ID
+              tagMapping.set(incomingTag.id, existingTag.id);
+            } else {
+              // New tag - generate new ID to avoid conflicts
+              const newTagId = `${Date.now()}-${Math.random()
+                .toString(36)
+                .substring(2, 8)}`;
+              tagMapping.set(incomingTag.id, newTagId);
+
+              newTags.push({
+                ...incomingTag,
+                id: newTagId,
+              });
+              importStats.newTags++;
+            }
+          });
+
+          return [...prevTags, ...newTags];
+        });
+      }
+
+      // 2. Merge Daily Tasks (with proper tag mapping)
+      if (data.dailyTasks) {
+        setDailyTasks((prevDailyTasks) => {
+          const mergedDailyTasks = { ...prevDailyTasks };
+
+          Object.keys(data.dailyTasks).forEach((dateKey) => {
+            const incomingTasks = data.dailyTasks[dateKey];
+            const existingTasks = mergedDailyTasks[dateKey] || [];
+
+            // Convert incoming tasks to proper format with mapped tag IDs
+            const processedIncomingTasks = incomingTasks.map((task) => {
+              // Map the tag ID if it exists in our mapping
+              const mappedTagId =
+                task.tag && tagMapping.has(task.tag)
+                  ? tagMapping.get(task.tag)
+                  : task.tag;
+
+              return {
+                ...task,
+                id: `${Date.now()}-${Math.random()
+                  .toString(36)
+                  .substring(2, 8)}-${Math.random()
+                  .toString(36)
+                  .substring(2, 4)}`, // Generate new ID to avoid conflicts
+                createdAt: new Date(task.createdAt),
+                focusTime: task.focusTime || 0,
+                timeSpent: task.timeSpent || 0,
+                completed: !!task.completed,
+                tag: mappedTagId, // Use mapped tag ID
+                subtasks: (task.subtasks || []).map((subtask) => {
+                  // Map subtask tag ID as well
+                  const mappedSubtaskTagId =
+                    subtask.tag && tagMapping.has(subtask.tag)
+                      ? tagMapping.get(subtask.tag)
+                      : subtask.tag;
+
+                  return {
+                    ...subtask,
+                    id: `${Date.now()}-${Math.random()
+                      .toString(36)
+                      .substring(2, 8)}-subtask-${Math.random()
+                      .toString(36)
+                      .substring(2, 4)}`,
+                    createdAt: new Date(subtask.createdAt || task.createdAt),
+                    focusTime: subtask.focusTime || 0,
+                    timeSpent: subtask.timeSpent || 0,
+                    completed: !!subtask.completed,
+                    parentTaskId: task.id,
+                    tag: mappedSubtaskTagId, // Use mapped tag ID
+                    subtasks: [],
+                  };
+                }),
+                subtasksExpanded: task.subtasksExpanded || false,
+              };
+            });
+
+            // Check for truly duplicate tasks (by title and date)
+            const newTasks = [];
+
+            processedIncomingTasks.forEach((incomingTask) => {
+              // Check if task already exists by title (more reliable than ID since we generate new IDs)
+              const existingTask = existingTasks.find(
+                (existing) =>
+                  existing.title.toLowerCase().trim() ===
+                    incomingTask.title.toLowerCase().trim() && !existing.isHabit
+              );
+
+              if (!existingTask) {
+                // Completely new task
+                newTasks.push(incomingTask);
+                importStats.newTasks++;
+                // Count subtasks as well
+                importStats.newSubtasks += (incomingTask.subtasks || []).length;
+              } else {
+                // Task exists, check for new subtasks
+                const mergedSubtasks = [...(existingTask.subtasks || [])];
+
+                (incomingTask.subtasks || []).forEach((incomingSubtask) => {
+                  const existingSubtask = mergedSubtasks.find(
+                    (existing) =>
+                      existing.title.toLowerCase().trim() ===
+                      incomingSubtask.title.toLowerCase().trim()
+                  );
+
+                  if (!existingSubtask) {
+                    // Generate new ID for subtask
+                    const newSubtaskId = `${
+                      existingTask.id
+                    }-subtask-${Date.now()}-${Math.random()
+                      .toString(36)
+                      .substring(2, 8)}`;
+                    mergedSubtasks.push({
+                      ...incomingSubtask,
+                      id: newSubtaskId,
+                      parentTaskId: existingTask.id,
+                    });
+                    importStats.newSubtasks++;
+                  }
+                });
+
+                // Update existing task with merged subtasks
+                const taskIndex = existingTasks.findIndex(
+                  (t) => t.id === existingTask.id
+                );
+                if (taskIndex !== -1) {
+                  existingTasks[taskIndex] = {
+                    ...existingTask,
+                    subtasks: mergedSubtasks,
+                  };
+                }
+              }
+            });
+
+            // Merge new tasks with existing ones
+            mergedDailyTasks[dateKey] = [...existingTasks, ...newTasks];
+          });
+
+          return mergedDailyTasks;
+        });
+      }
+
+      // 3. Merge Habits (with proper tag mapping)
+      if (data.habits) {
+        setHabits((prevHabits) => {
+          const newHabits = [];
+
+          data.habits.forEach((incomingHabit) => {
+            const existingHabit = prevHabits.find(
+              (existing) =>
+                existing.name.toLowerCase().trim() ===
+                incomingHabit.name.toLowerCase().trim()
+            );
+
+            if (!existingHabit) {
+              // Map the tag ID for the new habit
+              const mappedTagId =
+                incomingHabit.tag && tagMapping.has(incomingHabit.tag)
+                  ? tagMapping.get(incomingHabit.tag)
+                  : incomingHabit.tag;
+
+              // Generate new ID to avoid conflicts
+              const newHabitId = `${Date.now()}-${Math.random()
+                .toString(36)
+                .substring(2, 8)}`;
+              newHabits.push({
+                ...incomingHabit,
+                id: newHabitId,
+                tag: mappedTagId, // Use mapped tag ID
+                completedDates: incomingHabit.completedDates || [],
+              });
+              importStats.newHabits++;
+            } else {
+              // Merge completion dates for existing habits
+              const mergedCompletedDates = [
+                ...new Set([
+                  ...(existingHabit.completedDates || []),
+                  ...(incomingHabit.completedDates || []),
+                ]),
+              ];
+
+              // Update existing habit with merged completion dates
+              const habitIndex = prevHabits.findIndex(
+                (h) => h.id === existingHabit.id
+              );
+              if (habitIndex !== -1) {
+                prevHabits[habitIndex] = {
+                  ...existingHabit,
+                  completedDates: mergedCompletedDates,
+                };
+              }
+            }
+          });
+
+          return [...prevHabits, ...newHabits];
+        });
+      }
+
+      // 4. Optionally update settings (ask user first)
+      const settingsToUpdate = [];
+      if (typeof data.darkMode === "boolean" && data.darkMode !== darkMode) {
+        settingsToUpdate.push("dark mode");
+      }
+      if (data.theme && data.theme !== theme) {
+        settingsToUpdate.push("theme");
+      }
+
+      if (settingsToUpdate.length > 0) {
+        const updateSettings = confirm(
+          `Do you want to update your ${settingsToUpdate.join(
+            " and "
+          )} settings to match the imported data?`
+        );
+
+        if (updateSettings) {
+          if (typeof data.darkMode === "boolean") {
+            setDarkMode(data.darkMode);
+            importStats.updatedSettings.push("dark mode");
+          }
+          if (data.theme) {
+            setTheme(data.theme);
+            importStats.updatedSettings.push("theme");
+          }
+        }
+      }
+
+      // Show detailed import summary
+      const summaryParts = [];
+      if (importStats.newTasks > 0)
+        summaryParts.push(`${importStats.newTasks} new task(s)`);
+      if (importStats.newSubtasks > 0)
+        summaryParts.push(`${importStats.newSubtasks} new subtask(s)`);
+      if (importStats.newTags > 0)
+        summaryParts.push(`${importStats.newTags} new tag(s)`);
+      if (importStats.newHabits > 0)
+        summaryParts.push(`${importStats.newHabits} new habit(s)`);
+      if (importStats.updatedSettings.length > 0)
+        summaryParts.push(
+          `updated ${importStats.updatedSettings.join(" and ")}`
+        );
+
+      const totalNewItems =
+        importStats.newTasks +
+        importStats.newSubtasks +
+        importStats.newTags +
+        importStats.newHabits;
+
+      if (totalNewItems === 0 && importStats.updatedSettings.length === 0) {
+        alert(
+          "Import completed! No new items were found - all data was already present."
+        );
+      } else {
+        const summaryMessage =
+          summaryParts.length > 0
+            ? `Import successful! Added: ${summaryParts.join(", ")}.`
+            : "Import completed!";
+        alert(summaryMessage);
+      }
+    } catch (error) {
+      console.error("Import error:", error);
+      alert("Error importing data. Please try again.");
+    }
   };
 
   // Helper function to find a task by ID (including subtasks)
@@ -739,6 +1030,19 @@ export default function Home() {
                   onThemeChange={setTheme}
                   onExportData={exportData}
                   onImportData={importData}
+                  onOpenWebRTCShare={() => setShowWebRTCShare(true)}
+                />
+              )}
+
+              {showWebRTCShare && (
+                <WebRTCShareModal
+                  onClose={() => setShowWebRTCShare(false)}
+                  dailyTasks={dailyTasks}
+                  customTags={customTags}
+                  habits={habits}
+                  darkMode={darkMode}
+                  theme={theme}
+                  onImportData={importDataFromWebRTC}
                 />
               )}
 

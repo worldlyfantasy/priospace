@@ -12,6 +12,8 @@ import {
   ExternalLink,
   Palette,
   Check,
+  Share,
+  Wifi,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -23,6 +25,7 @@ export function SettingsModal({
   onImportData,
   theme,
   onThemeChange,
+  onOpenWebRTCShare, // New prop for opening WebRTC share
 }) {
   const themes = [
     {
@@ -134,6 +137,11 @@ export function SettingsModal({
 
   const handleTwitterClick = () => {
     window.open("https://x.com/Anoyroyc", "_blank");
+  };
+
+  const handleWebRTCShare = () => {
+    onClose(); // Close settings first
+    onOpenWebRTCShare(); // Open WebRTC share modal
   };
 
   const ThemePreview = ({ themeData, isSelected, onClick }) => (
@@ -361,6 +369,34 @@ export function SettingsModal({
               </div>
             </motion.div>
 
+            {/* WebRTC Share */}
+            <motion.div variants={itemVariants}>
+              <div className="flex items-center justify-between p-4 rounded-xl border-2 border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-800/20">
+                <div className="flex items-center gap-3">
+                  <Wifi className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <div>
+                    <div className="font-extrabold text-blue-700 dark:text-blue-300">
+                      Sync Tasks (P2P)
+                    </div>
+                    <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                      Sync your tasks from/with another device
+                    </div>
+                  </div>
+                </div>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    onClick={handleWebRTCShare}
+                    className="bg-blue-600 hover:bg-blue-700 text-white border-0 rounded-xl font-extrabold w-12 h-12 p-0"
+                  >
+                    <Share className="h-4 w-4" />
+                  </Button>
+                </motion.div>
+              </div>
+            </motion.div>
+
             {/* Export Data */}
             <motion.div variants={itemVariants}>
               <div className="flex items-center justify-between p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80">
@@ -445,18 +481,18 @@ export function SettingsModal({
             >
               <div className="text-center space-y-3">
                 <div className="text-lg font-extrabold text-primary">
-                  Prio Space V1.0.0
+                  Prio Space V1.2.0
                 </div>
                 <div className="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                  Focus • Track • Achieve
+                  Focus • Track • Share • Achieve
                 </div>
 
                 {/* vibecoded section */}
                 <div className="pt-3">
-                  <div className="text-lg font-extrabold text-primary">
-                    vibecoded & coded
-                  </div>
                   <div className="text-sm text-gray-600 dark:text-gray-300 font-medium -mt-1">
+                    <span className="text-lg font-extrabold text-primary">
+                      Coded
+                    </span>{" "}
                     with{" "}
                     <motion.span
                       animate={{ scale: [1, 1.2, 1] }}
