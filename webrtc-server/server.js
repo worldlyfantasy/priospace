@@ -21,6 +21,12 @@ class SignalingServer {
 
       console.log(`✅ Client ${clientId} connected`);
 
+      // Send connection confirmation immediately
+      this.sendMessage(ws, {
+        type: "connected",
+        clientId: clientId,
+      });
+
       ws.on("message", (message) => {
         try {
           const data = JSON.parse(message);
@@ -39,7 +45,26 @@ class SignalingServer {
         console.error("❌ WebSocket error:", error);
         this.handleDisconnect(ws);
       });
+
+      // Add ping/pong for connection health
+      ws.isAlive = true;
+      ws.on("pong", () => {
+        ws.isAlive = true;
+      });
     });
+
+    // Ping clients every 30 seconds to maintain connection health
+    this.pingInterval = setInterval(() => {
+      this.wss.clients.forEach((ws) => {
+        if (ws.isAlive === false) {
+          console.log("🔌 Terminating dead connection");
+          return ws.terminate();
+        }
+
+        ws.isAlive = false;
+        ws.ping();
+      });
+    }, 30000);
   }
 
   generateClientId() {
@@ -48,7 +73,10 @@ class SignalingServer {
 
   handleMessage(ws, data) {
     const client = this.clients.get(ws);
-    if (!client) return;
+    if (!client) {
+      console.warn("⚠️  Message from unknown client");
+      return;
+    }
 
     console.log(`📨 Message from ${client.id}:`, data.type);
 
@@ -77,6 +105,11 @@ class SignalingServer {
         this.handleIceCandidate(ws, data);
         break;
 
+      case "ping":
+        // Respond to client ping
+        this.sendMessage(ws, { type: "pong" });
+        break;
+
       default:
         console.log("⚠️  Unknown message type:", data.type);
         this.sendError(ws, "Unknown message type");
@@ -92,9 +125,27 @@ class SignalingServer {
       return;
     }
 
+    // If client is already in this room, just confirm
+    if (client.roomId === roomId) {
+      console.log(`🏠 Client ${client.id} already in room ${roomId}`);
+      this.sendMessage(ws, {
+        type: "room-created",
+        roomId: roomId,
+      });
+      this.sendPeersList(ws, roomId);
+      return;
+    }
+
+    // Remove client from previous room if any
+    if (client.roomId) {
+      this.removeClientFromRoom(client);
+    }
+
     // Check if room already exists
     if (this.rooms.has(roomId)) {
-      this.sendError(ws, "Room already exists");
+      // Room exists, join it instead
+      console.log(`🏠 Room ${roomId} already exists, joining instead`);
+      this.handleJoinRoom(ws, data);
       return;
     }
 
@@ -107,12 +158,10 @@ class SignalingServer {
     console.log(`🏠 Room ${roomId} created by ${client.id}`);
 
     // Confirm room creation
-    ws.send(
-      JSON.stringify({
-        type: "room-created",
-        roomId: roomId,
-      })
-    );
+    this.sendMessage(ws, {
+      type: "room-created",
+      roomId: roomId,
+    });
 
     // Send empty peers list initially
     this.sendPeersList(ws, roomId);
@@ -127,10 +176,27 @@ class SignalingServer {
       return;
     }
 
-    // Check if room exists
-    if (!this.rooms.has(roomId)) {
-      this.sendError(ws, "Room not found");
+    // If client is already in this room, just confirm
+    if (client.roomId === roomId) {
+      console.log(`👥 Client ${client.id} already in room ${roomId}`);
+      this.sendMessage(ws, {
+        type: "room-joined",
+        roomId: roomId,
+      });
+      this.sendPeersList(ws, roomId);
       return;
+    }
+
+    // Remove client from previous room if any
+    if (client.roomId) {
+      this.removeClientFromRoom(client);
+    }
+
+    // Check if room exists, create if it doesn't
+    if (!this.rooms.has(roomId)) {
+      console.log(`🏠 Room ${roomId} doesn't exist, creating it`);
+      const room = new Set();
+      this.rooms.set(roomId, room);
     }
 
     const room = this.rooms.get(roomId);
@@ -145,9 +211,17 @@ class SignalingServer {
     room.add(client);
     client.roomId = roomId;
 
-    console.log(`👥 Client ${client.id} joined room ${roomId}`);
+    console.log(
+      `👥 Client ${client.id} joined room ${roomId} (${room.size} total)`
+    );
 
-    // Notify all clients in room about new peer
+    // Confirm room join
+    this.sendMessage(ws, {
+      type: "room-joined",
+      roomId: roomId,
+    });
+
+    // Notify all other clients in room about new peer
     this.broadcastToRoom(
       roomId,
       {
@@ -163,9 +237,20 @@ class SignalingServer {
 
   handleLeaveRoom(ws) {
     const client = this.clients.get(ws);
-    if (!client || !client.roomId) return;
+    if (!client || !client.roomId) {
+      this.sendMessage(ws, {
+        type: "room-left",
+        success: true,
+      });
+      return;
+    }
 
     this.removeClientFromRoom(client);
+
+    this.sendMessage(ws, {
+      type: "room-left",
+      success: true,
+    });
   }
 
   handleOffer(ws, data) {
@@ -179,17 +264,15 @@ class SignalingServer {
 
     // Forward offer to specific peer
     const targetClient = this.findClientInRoom(roomId, to);
-    if (targetClient) {
-      targetClient.ws.send(
-        JSON.stringify({
-          type: "offer",
-          offer: offer,
-          from: client.id,
-        })
-      );
+    if (targetClient && targetClient.ws.readyState === WebSocket.OPEN) {
+      this.sendMessage(targetClient.ws, {
+        type: "offer",
+        offer: offer,
+        from: client.id,
+      });
       console.log(`🤝 Offer forwarded from ${client.id} to ${to}`);
     } else {
-      this.sendError(ws, "Target peer not found");
+      this.sendError(ws, "Target peer not found or disconnected");
     }
   }
 
@@ -204,41 +287,51 @@ class SignalingServer {
 
     // Forward answer to specific peer
     const targetClient = this.findClientInRoom(roomId, to);
-    if (targetClient) {
-      targetClient.ws.send(
-        JSON.stringify({
-          type: "answer",
-          answer: answer,
-          from: client.id,
-        })
-      );
+    if (targetClient && targetClient.ws.readyState === WebSocket.OPEN) {
+      this.sendMessage(targetClient.ws, {
+        type: "answer",
+        answer: answer,
+        from: client.id,
+      });
       console.log(`✅ Answer forwarded from ${client.id} to ${to}`);
     } else {
-      this.sendError(ws, "Target peer not found");
+      this.sendError(ws, "Target peer not found or disconnected");
     }
   }
 
   handleIceCandidate(ws, data) {
     const client = this.clients.get(ws);
-    const { candidate, roomId } = data;
+    const { candidate, roomId, to } = data;
 
     if (!client || client.roomId !== roomId) {
       this.sendError(ws, "Not in specified room");
       return;
     }
 
-    // Broadcast ICE candidate to all other peers in room
-    this.broadcastToRoom(
-      roomId,
-      {
-        type: "ice-candidate",
-        candidate: candidate,
-        from: client.id,
-      },
-      client.id
-    );
-
-    console.log(`🧊 ICE candidate broadcasted from ${client.id}`);
+    if (to) {
+      // Send to specific peer
+      const targetClient = this.findClientInRoom(roomId, to);
+      if (targetClient && targetClient.ws.readyState === WebSocket.OPEN) {
+        this.sendMessage(targetClient.ws, {
+          type: "ice-candidate",
+          candidate: candidate,
+          from: client.id,
+        });
+        console.log(`🧊 ICE candidate sent from ${client.id} to ${to}`);
+      }
+    } else {
+      // Broadcast to all other peers in room
+      this.broadcastToRoom(
+        roomId,
+        {
+          type: "ice-candidate",
+          candidate: candidate,
+          from: client.id,
+        },
+        client.id
+      );
+      console.log(`🧊 ICE candidate broadcasted from ${client.id}`);
+    }
   }
 
   handleDisconnect(ws) {
@@ -280,10 +373,13 @@ class SignalingServer {
     if (room.size === 0) {
       this.rooms.delete(roomId);
       console.log(`🗑️  Room ${roomId} deleted (empty)`);
+    } else {
+      console.log(
+        `👋 Client ${client.id} left room ${roomId} (${room.size} remaining)`
+      );
     }
 
     client.roomId = null;
-    console.log(`👋 Client ${client.id} left room ${roomId}`);
   }
 
   findClientInRoom(roomId, clientId) {
@@ -303,40 +399,60 @@ class SignalingServer {
     if (!room) return;
 
     const client = this.clients.get(ws);
+    if (!client) return;
+
     const peers = Array.from(room)
       .filter((c) => c.id !== client.id)
       .map((c) => ({ id: c.id }));
 
-    ws.send(
-      JSON.stringify({
-        type: "peers-list",
-        peers: peers,
-      })
-    );
+    this.sendMessage(ws, {
+      type: "peers-list",
+      peers: peers,
+      roomId: roomId,
+    });
+
+    console.log(`📋 Sent peers list to ${client.id}: ${peers.length} peers`);
   }
 
   broadcastToRoom(roomId, message, excludeClientId = null) {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
+    let sentCount = 0;
     for (const client of room) {
       if (excludeClientId && client.id === excludeClientId) continue;
 
       if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(JSON.stringify(message));
+        this.sendMessage(client.ws, message);
+        sentCount++;
+      } else {
+        console.warn(`⚠️  Client ${client.id} has closed connection, removing`);
+        // Clean up dead connections
+        room.delete(client);
+        this.clients.delete(client.ws);
       }
+    }
+
+    if (sentCount > 0) {
+      console.log(`📡 Broadcasted to ${sentCount} clients in room ${roomId}`);
+    }
+  }
+
+  sendMessage(ws, message) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(message));
+      return true;
+    } else {
+      console.warn("⚠️  Attempted to send message to closed connection");
+      return false;
     }
   }
 
   sendError(ws, message) {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(
-        JSON.stringify({
-          type: "error",
-          message: message,
-        })
-      );
-    }
+    this.sendMessage(ws, {
+      type: "error",
+      message: message,
+    });
   }
 
   // Utility methods for monitoring
@@ -371,34 +487,52 @@ class SignalingServer {
     }
     console.log("");
   }
+
+  // Graceful shutdown
+  shutdown() {
+    console.log("\n🛑 Shutting down signaling server...");
+
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+    }
+
+    // Notify all clients about shutdown
+    this.wss.clients.forEach((ws) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        this.sendMessage(ws, {
+          type: "server-shutdown",
+          message: "Server is shutting down",
+        });
+      }
+    });
+
+    this.wss.close(() => {
+      console.log("✅ Server closed gracefully");
+    });
+  }
 }
 
 // Create and start the server
 const server = new SignalingServer(process.env.PORT || 3001);
 
 // Optional: Print stats every 30 seconds
-setInterval(() => {
+const statsInterval = setInterval(() => {
   const stats = server.getRoomStats();
   if (stats.totalClients > 0) {
     server.printStats();
   }
 }, 30000);
 
-// Graceful shutdown
-process.on("SIGINT", () => {
-  console.log("\n🛑 Shutting down signaling server...");
-  server.wss.close(() => {
-    console.log("✅ Server closed gracefully");
+// Graceful shutdown handlers
+const gracefulShutdown = () => {
+  clearInterval(statsInterval);
+  server.shutdown();
+  setTimeout(() => {
     process.exit(0);
-  });
-});
+  }, 5000);
+};
 
-process.on("SIGTERM", () => {
-  console.log("\n🛑 Shutting down signaling server...");
-  server.wss.close(() => {
-    console.log("✅ Server closed gracefully");
-    process.exit(0);
-  });
-});
+process.on("SIGINT", gracefulShutdown);
+process.on("SIGTERM", gracefulShutdown);
 
 module.exports = SignalingServer;
