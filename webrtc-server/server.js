@@ -1,7 +1,8 @@
 const WebSocket = require("ws");
+require("dotenv").config();
 
 class SignalingServer {
-  constructor(port = 3001) {
+  constructor(port = process.env.PORT || 3001) {
     this.port = port;
     this.wss = new WebSocket.Server({ port: this.port });
     this.rooms = new Map(); // roomId -> Set of client objects
@@ -373,7 +374,7 @@ class SignalingServer {
 }
 
 // Create and start the server
-const server = new SignalingServer(3001);
+const server = new SignalingServer(process.env.PORT || 3001);
 
 // Optional: Print stats every 30 seconds
 setInterval(() => {
