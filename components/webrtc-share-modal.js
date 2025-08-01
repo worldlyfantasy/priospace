@@ -43,11 +43,13 @@ export function WebRTCShareModal({
   const [serverUrl, setServerUrl] = useState("wss://api.prio.space");
   const [showServerConfig, setShowServerConfig] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [connectionState, setConnectionState] = useState("disconnected"); // disconnected, connecting, connected
 
   // Refs
   const wsRef = useRef(null);
   const peerConnectionRef = useRef(null);
   const dataChannelRef = useRef(null);
+  const pendingActionRef = useRef(null); // Store pending action to execute after connection
 
   // WebRTC configuration
   const rtcConfig = {
@@ -81,55 +83,125 @@ export function WebRTCShareModal({
 
   // WebSocket and signaling functions
   const connectToSignalingServer = () => {
-    try {
-      wsRef.current = new WebSocket(serverUrl);
-
-      wsRef.current.onopen = () => {
-        console.log("Connected to signaling server");
-      };
-
-      wsRef.current.onmessage = async (event) => {
-        const message = JSON.parse(event.data);
-        await handleSignalingMessage(message);
-      };
-
-      wsRef.current.onclose = () => {
-        console.log("Disconnected from signaling server");
-        if (status !== "idle" && status !== "shared") {
-          setStatus("error");
-          setErrorMessage("Lost connection to signaling server");
+    return new Promise((resolve, reject) => {
+      try {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          resolve(wsRef.current);
+          return;
         }
-      };
 
-      wsRef.current.onerror = (error) => {
-        console.error("WebSocket error:", error);
+        // Close existing connection if any
+        if (wsRef.current) {
+          wsRef.current.close();
+        }
+
+        setConnectionState("connecting");
+        wsRef.current = new WebSocket(serverUrl);
+
+        const connectionTimeout = setTimeout(() => {
+          setStatus("error");
+          setErrorMessage("Connection timeout. Server might be unavailable.");
+          setConnectionState("disconnected");
+          reject(new Error("Connection timeout"));
+        }, 10000); // 10 second timeout
+
+        wsRef.current.onopen = () => {
+          console.log("Connected to signaling server");
+          clearTimeout(connectionTimeout);
+          setConnectionState("connected");
+          resolve(wsRef.current);
+        };
+
+        wsRef.current.onmessage = async (event) => {
+          const message = JSON.parse(event.data);
+          await handleSignalingMessage(message);
+        };
+
+        wsRef.current.onclose = (event) => {
+          console.log(
+            "Disconnected from signaling server",
+            event.code,
+            event.reason
+          );
+          clearTimeout(connectionTimeout);
+          setConnectionState("disconnected");
+
+          if (status !== "idle" && status !== "shared") {
+            // Only show error if we were expecting to stay connected
+            if (event.code !== 1000) {
+              // 1000 is normal closure
+              setStatus("error");
+              setErrorMessage("Lost connection to signaling server");
+            }
+          }
+        };
+
+        wsRef.current.onerror = (error) => {
+          console.error("WebSocket error:", error);
+          clearTimeout(connectionTimeout);
+          setConnectionState("disconnected");
+          setStatus("error");
+          setErrorMessage(
+            "Cannot connect to signaling server. Check server URL and try again."
+          );
+          reject(error);
+        };
+      } catch (error) {
+        setConnectionState("disconnected");
         setStatus("error");
-        setErrorMessage(
-          "Cannot connect to signaling server. Make sure the server is running."
-        );
-      };
-    } catch (error) {
-      setStatus("error");
-      setErrorMessage("Failed to connect to signaling server");
+        setErrorMessage("Failed to connect to signaling server");
+        reject(error);
+      }
+    });
+  };
+
+  const sendMessage = (message) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(message));
+      return true;
+    } else {
+      console.warn(
+        "Attempted to send message but WebSocket is not open:",
+        wsRef.current?.readyState
+      );
+      return false;
     }
   };
 
   const handleSignalingMessage = async (message) => {
+    console.log("Received signaling message:", message.type);
+
     switch (message.type) {
+      case "connected":
+        console.log(
+          "Server confirmed connection with client ID:",
+          message.clientId
+        );
+        break;
+
       case "room-created":
+        console.log("Room created:", message.roomId);
         setStatus("hosting");
         setRoomId(message.roomId);
         break;
 
+      case "room-joined":
+        console.log("Room joined:", message.roomId);
+        setStatus("connected");
+        break;
+
       case "peers-list":
+        console.log("Peers list received:", message.peers);
         setNearbyPeers(message.peers);
         break;
 
       case "peer-joined":
+        console.log("Peer joined:", message.peer);
         setNearbyPeers((prev) => [...prev, message.peer]);
         break;
 
       case "peer-left":
+        console.log("Peer left:", message.peerId);
         setNearbyPeers((prev) => prev.filter((p) => p.id !== message.peerId));
         break;
 
@@ -146,9 +218,17 @@ export function WebRTCShareModal({
         break;
 
       case "error":
+        console.error("Server error:", message.message);
         setStatus("error");
         setErrorMessage(message.message);
         break;
+
+      case "pong":
+        // Server responded to ping
+        break;
+
+      default:
+        console.log("Unknown message type:", message.type);
     }
   };
 
@@ -157,14 +237,12 @@ export function WebRTCShareModal({
     const pc = new RTCPeerConnection(rtcConfig);
 
     pc.onicecandidate = (event) => {
-      if (event.candidate && wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "ice-candidate",
-            candidate: event.candidate,
-            roomId: roomId,
-          })
-        );
+      if (event.candidate) {
+        sendMessage({
+          type: "ice-candidate",
+          candidate: event.candidate,
+          roomId: roomId,
+        });
       }
     };
 
@@ -177,56 +255,78 @@ export function WebRTCShareModal({
         pc.connectionState === "disconnected"
       ) {
         setStatus("error");
-        setErrorMessage("Connection failed");
+        setErrorMessage("P2P connection failed");
       }
     };
 
     return pc;
   };
 
-  // Room management functions
-  const startHosting = () => {
-    const newRoomId = generateRoomId();
-    setRoomId(newRoomId);
-    setIsHost(true);
-    setStatus("hosting");
+  // Room management functions with proper connection handling
+  const startHosting = async () => {
+    try {
+      const newRoomId = generateRoomId();
+      setRoomId(newRoomId);
+      setIsHost(true);
+      setStatus("hosting");
+      setErrorMessage("");
 
-    connectToSignalingServer();
+      console.log("Starting to host room:", newRoomId);
 
-    setTimeout(() => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "create-room",
-            roomId: newRoomId,
-          })
-        );
+      const ws = await connectToSignalingServer();
+
+      // Send create room message
+      const success = sendMessage({
+        type: "create-room",
+        roomId: newRoomId,
+      });
+
+      if (!success) {
+        throw new Error("Failed to send create room message");
       }
-    }, 1000);
+    } catch (error) {
+      console.error("Error starting host:", error);
+      setStatus("error");
+      setErrorMessage("Failed to start hosting. Please try again.");
+    }
   };
 
-  const joinRoom = (inputRoomId) => {
-    setRoomId(inputRoomId);
-    setIsClient(true);
-    setStatus("connecting");
-
-    connectToSignalingServer();
-
-    setTimeout(() => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "join-room",
-            roomId: inputRoomId,
-          })
-        );
+  const joinRoom = async (inputRoomId) => {
+    try {
+      if (!inputRoomId?.trim()) {
+        setErrorMessage("Please enter a room ID");
+        return;
       }
-    }, 1000);
+
+      setRoomId(inputRoomId);
+      setIsClient(true);
+      setStatus("connecting");
+      setErrorMessage("");
+
+      console.log("Attempting to join room:", inputRoomId);
+
+      const ws = await connectToSignalingServer();
+
+      // Send join room message
+      const success = sendMessage({
+        type: "join-room",
+        roomId: inputRoomId,
+      });
+
+      if (!success) {
+        throw new Error("Failed to send join room message");
+      }
+    } catch (error) {
+      console.error("Error joining room:", error);
+      setStatus("error");
+      setErrorMessage("Failed to join room. Check room ID and try again.");
+    }
   };
 
   // Data sharing functions
   const sendDataToPeer = async (peerId) => {
     try {
+      console.log("Sending data to peer:", peerId);
       const pc = createPeerConnection();
       peerConnectionRef.current = pc;
 
@@ -236,7 +336,7 @@ export function WebRTCShareModal({
       });
 
       dataChannel.onopen = () => {
-        console.log("Data channel opened");
+        console.log("Data channel opened, sending data");
         const todoData = {
           dailyTasks,
           customTags,
@@ -252,7 +352,7 @@ export function WebRTCShareModal({
         // Close modal after successful data send (Host side)
         setTimeout(() => {
           onClose();
-        }, 1000);
+        }, 1500);
       };
 
       dataChannel.onerror = (error) => {
@@ -267,16 +367,12 @@ export function WebRTCShareModal({
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "offer",
-            offer: offer,
-            roomId: roomId,
-            to: peerId,
-          })
-        );
-      }
+      sendMessage({
+        type: "offer",
+        offer: offer,
+        roomId: roomId,
+        to: peerId,
+      });
     } catch (error) {
       console.error("Error sending data:", error);
       setStatus("error");
@@ -287,6 +383,7 @@ export function WebRTCShareModal({
   // WebRTC message handlers
   const handleReceiveOffer = async (offer, from) => {
     try {
+      console.log("Handling offer from:", from);
       const pc = createPeerConnection();
       peerConnectionRef.current = pc;
 
@@ -294,6 +391,7 @@ export function WebRTCShareModal({
         const dataChannel = event.channel;
         dataChannel.onmessage = (event) => {
           try {
+            console.log("Received data from peer");
             const receivedTodoData = JSON.parse(event.data);
             setReceivedData(receivedTodoData);
             // On client side, when data is received, reset status to 'idle' to hide connected section
@@ -310,16 +408,12 @@ export function WebRTCShareModal({
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "answer",
-            answer: answer,
-            roomId: roomId,
-            to: from,
-          })
-        );
-      }
+      sendMessage({
+        type: "answer",
+        answer: answer,
+        roomId: roomId,
+        to: from,
+      });
     } catch (error) {
       console.error("Error handling offer:", error);
       setStatus("error");
@@ -358,6 +452,7 @@ export function WebRTCShareModal({
 
   // Cleanup functions
   const resetState = () => {
+    console.log("Resetting state");
     setIsHost(false);
     setIsClient(false);
     setRoomId("");
@@ -368,14 +463,45 @@ export function WebRTCShareModal({
     setShowReceivedData(false);
     setErrorMessage("");
     setCopySuccess(false);
+    setConnectionState("disconnected");
+    pendingActionRef.current = null;
 
-    if (wsRef.current) {
-      wsRef.current.close();
+    if (dataChannelRef.current) {
+      dataChannelRef.current.close();
+      dataChannelRef.current = null;
     }
+
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      // Send leave room message before closing
+      wsRef.current.send(JSON.stringify({ type: "leave-room" }));
+      wsRef.current.close();
+      wsRef.current = null;
     }
   };
+
+  // Connection health check
+  useEffect(() => {
+    let pingInterval;
+
+    if (connectionState === "connected") {
+      pingInterval = setInterval(() => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          sendMessage({ type: "ping" });
+        }
+      }, 30000); // Ping every 30 seconds
+    }
+
+    return () => {
+      if (pingInterval) {
+        clearInterval(pingInterval);
+      }
+    };
+  }, [connectionState]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -383,6 +509,13 @@ export function WebRTCShareModal({
       resetState();
     };
   }, []);
+
+  // Handle Enter key for joining room
+  const handleRoomIdKeyPress = (e) => {
+    if (e.key === "Enter" && roomId.trim()) {
+      joinRoom(roomId);
+    }
+  };
 
   // Animation variants
   const backdropVariants = {
