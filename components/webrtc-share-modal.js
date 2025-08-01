@@ -268,7 +268,7 @@ export function WebRTCShareModal({
       const newRoomId = generateRoomId();
       setRoomId(newRoomId);
       setIsHost(true);
-      setStatus("hosting");
+      setStatus("connecting"); // FIX: Wait for server confirmation
       setErrorMessage("");
 
       console.log("Starting to host room:", newRoomId);
