@@ -602,16 +602,16 @@ export default function Home() {
     }
   };
 
-  const addTask = (title, tagId) => {
-    const dateString = getDateString(selectedDate);
-    const currentTasks = getCurrentDayTasks();
+  const addTask = (title, tagId, taskDate = selectedDate) => {
+    const dateString = getDateString(taskDate);
+    const currentTasks = dailyTasks[dateString] || [];
     const newTask = {
       id: Date.now().toString(),
       title,
       completed: false,
       timeSpent: 0,
       focusTime: 0,
-      createdAt: selectedDate,
+      createdAt: taskDate,
       tag: tagId,
       subtasks: [], // Initialize empty subtasks array
       subtasksExpanded: false, // Initialize expansion state
@@ -1054,6 +1054,7 @@ export default function Home() {
                   onAddTask={addTask}
                   customTags={customTags}
                   onAddCustomTag={addCustomTag}
+                  selectedDate={selectedDate}
                 />
               )}
 

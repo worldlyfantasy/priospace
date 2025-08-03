@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Tag, Check } from "lucide-react";
+import { X, Plus, Tag, Check, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,12 +31,21 @@ export function AddTaskModal({
   onAddTask,
   customTags,
   onAddCustomTag,
+  selectedDate, // Current selected date from parent
 }) {
   const [taskTitle, setTaskTitle] = useState("");
   const [selectedTag, setSelectedTag] = useState("");
+  const [taskDate, setTaskDate] = useState(selectedDate || new Date());
   const [showAddTag, setShowAddTag] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
+
+  // Update taskDate when selectedDate changes
+  useEffect(() => {
+    if (selectedDate) {
+      setTaskDate(selectedDate);
+    }
+  }, [selectedDate]);
 
   // Arrow key navigation for categories
   useEffect(() => {
@@ -88,7 +97,7 @@ export function AddTaskModal({
 
   const handleSubmit = () => {
     if (taskTitle.trim()) {
-      onAddTask(taskTitle.trim(), selectedTag || undefined);
+      onAddTask(taskTitle.trim(), selectedTag || undefined, taskDate);
       onClose();
     }
   };
@@ -101,6 +110,37 @@ export function AddTaskModal({
       setShowAddTag(false);
     }
   };
+
+  // Helper function to format date for input
+  const formatDateForInput = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  // Helper function to parse date from input
+  const parseDateFromInput = (dateString) => {
+    const date = new Date(dateString + "T00:00:00");
+    return isNaN(date.getTime()) ? new Date() : date;
+  };
+
+  // Get quick date options
+  const getQuickDateOptions = () => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
+    return [
+      { label: "Today", date: today },
+      { label: "Tomorrow", date: tomorrow },
+      { label: "Next Week", date: nextWeek },
+    ];
+  };
+
+  const quickDateOptions = getQuickDateOptions();
 
   // Animation variants
   const backdropVariants = {
@@ -160,15 +200,6 @@ export function AddTaskModal({
       opacity: 1,
       y: 0,
       transition: { duration: 0.3, ease: "easeOut" },
-    },
-  };
-
-  const tabVariants = {
-    hidden: { scale: 0.9, opacity: 0 },
-    visible: {
-      scale: 1,
-      opacity: 1,
-      transition: { duration: 0.2 },
     },
   };
 
@@ -240,7 +271,7 @@ export function AddTaskModal({
           transition={{ delay: 0.2 }}
         >
           <div
-            className="w-12 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full"
+            className="w-12 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full cursor-pointer"
             onClick={onClose}
           />
         </motion.div>
@@ -295,6 +326,43 @@ export function AddTaskModal({
                 }
                 autoFocus
                 className="border-0 bg-transparent md:text-2xl h-10 font-extrabold px-0 py-2 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+            </motion.div>
+
+            {/* Date Selection */}
+            <motion.div variants={itemVariants} className="space-y-3">
+              <label className="text-sm font-extrabold text-gray-700 dark:text-gray-200 uppercase tracking-wider flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Date
+              </label>
+
+              {/* Quick Date Options */}
+              <div className="flex gap-2 flex-wrap">
+                {quickDateOptions.map((option) => (
+                  <motion.button
+                    key={option.label}
+                    onClick={() => setTaskDate(option.date)}
+                    className={`px-3 py-2 text-sm font-bold rounded-lg border-2 transition-all duration-200 ${
+                      taskDate.toDateString() === option.date.toDateString()
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-gray-300 hover:border-primary/50 dark:border-gray-600 dark:hover:border-primary/50 dark:text-gray-100"
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {option.label}
+                  </motion.button>
+                ))}
+              </div>
+
+              {/* Date Input */}
+              <input
+                type="date"
+                value={formatDateForInput(taskDate)}
+                onChange={(e) =>
+                  setTaskDate(parseDateFromInput(e.target.value))
+                }
+                className="w-full border-2 border-gray-300 focus:border-primary/70 font-extrabold dark:border-gray-600 dark:focus:border-primary/80 dark:bg-gray-800 dark:text-gray-100 rounded-xl py-3 px-4"
               />
             </motion.div>
 

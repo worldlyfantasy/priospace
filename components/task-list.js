@@ -21,42 +21,23 @@ export function TaskList({
   onTaskClick,
   onAddSubtask,
 }) {
-  const [holdingTask, setHoldingTask] = useState(null);
-  const [holdProgress, setHoldProgress] = useState(0);
   // Use simple object instead of Set for better state management
   const [expandedTasks, setExpandedTasks] = useState({});
+  const [collapsedSections, setCollapsedSections] = useState({
+    habits: false,
+    tasks: false,
+  });
 
   // Audio refs for sound effects
-  const holdAudioRef = useRef(null);
   const completeAudioRef = useRef(null);
 
   // Initialize audio elements
   if (typeof window !== "undefined") {
-    if (!holdAudioRef.current) {
-      holdAudioRef.current = new Audio("/music/hold.mp3");
-      holdAudioRef.current.volume = 0.5;
-    }
     if (!completeAudioRef.current) {
       completeAudioRef.current = new Audio("/music/complete.mp3");
       completeAudioRef.current.volume = 0.3;
     }
   }
-
-  const playHoldSound = () => {
-    if (holdAudioRef.current) {
-      holdAudioRef.current.currentTime = 0;
-      holdAudioRef.current
-        .play()
-        .catch((e) => console.log("Hold sound play failed:", e));
-    }
-  };
-
-  const stopHoldSound = () => {
-    if (holdAudioRef.current) {
-      holdAudioRef.current.pause();
-      holdAudioRef.current.currentTime = 0;
-    }
-  };
 
   const playCompleteSound = () => {
     if (completeAudioRef.current) {
@@ -67,63 +48,17 @@ export function TaskList({
     }
   };
 
-  const handleMouseDown = (taskId, event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const task = findTaskById(taskId);
-    if (task?.completed) return;
-
-    setHoldingTask(taskId);
-    playHoldSound();
-
-    let progress = 0;
-    let holdCompleted = false;
-    let animationFrameId;
-
-    const animateProgress = () => {
-      progress += 2;
-      setHoldProgress(progress);
-      if (progress >= 100) {
-        cancelAnimationFrame(animationFrameId);
-        holdCompleted = true;
-        stopHoldSound();
-        playCompleteSound();
-        onToggleTask(taskId);
-        setHoldingTask(null);
-        setHoldProgress(0);
-      } else {
-        animationFrameId = requestAnimationFrame(animateProgress);
-      }
-    };
-
-    animationFrameId = requestAnimationFrame(animateProgress);
-
-    const cleanup = () => {
-      cancelAnimationFrame(animationFrameId);
-      stopHoldSound();
-      setHoldingTask(null);
-      setHoldProgress(0);
-      event.target.holdCompleted = holdCompleted;
-    };
-
-    const handleMouseUp = () => {
-      cleanup();
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.removeEventListener("touchend", handleMouseUp);
-    };
-
-    document.addEventListener("mouseup", handleMouseUp);
-    document.addEventListener("touchend", handleMouseUp);
+  const handleTaskClick = (task, event) => {
+    onTaskClick(task);
   };
 
-  const handleTaskClick = (task, event) => {
-    if (holdingTask) return;
-    const holdCompleted = event.target.holdCompleted;
-    if (holdCompleted) {
-      event.target.holdCompleted = false;
-      return;
+  const handleToggleTask = (taskId, event) => {
+    event.stopPropagation();
+    const task = findTaskById(taskId);
+    if (!task.completed) {
+      playCompleteSound();
     }
-    onTaskClick(task);
+    onToggleTask(taskId);
   };
 
   const toggleExpanded = (taskId, event) => {
@@ -133,6 +68,13 @@ export function TaskList({
     setExpandedTasks((prev) => ({
       ...prev,
       [taskId]: !prev[taskId],
+    }));
+  };
+
+  const toggleSection = (section) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
     }));
   };
 
@@ -183,10 +125,21 @@ export function TaskList({
     return (task.focusTime || 0) + subtaskFocusTime;
   };
 
-  // Filter main tasks
+  // Filter and sort tasks
   const mainTasks = tasks.filter((task) => !task.parentTaskId);
   const regularTasks = mainTasks.filter((task) => !task.isHabit);
   const habitTasks = mainTasks.filter((task) => task.isHabit);
+
+  // Sort tasks: incomplete first, then completed
+  const sortTasksByCompletion = (taskList) => {
+    return [...taskList].sort((a, b) => {
+      if (a.completed === b.completed) return 0;
+      return a.completed ? 1 : -1;
+    });
+  };
+
+  const sortedRegularTasks = sortTasksByCompletion(regularTasks);
+  const sortedHabitTasks = sortTasksByCompletion(habitTasks);
 
   // Animation variants
   const containerVariants = {
@@ -234,11 +187,31 @@ export function TaskList({
     },
   };
 
+  const sectionVariants = {
+    hidden: { height: 0, opacity: 0 },
+    visible: {
+      height: "auto",
+      opacity: 1,
+      transition: {
+        height: { duration: 0.3, ease: "easeOut" },
+        opacity: { duration: 0.2, delay: 0.1 },
+      },
+    },
+    exit: {
+      height: 0,
+      opacity: 0,
+      transition: {
+        opacity: { duration: 0.1 },
+        height: { duration: 0.2, delay: 0.1 },
+      },
+    },
+  };
+
   return (
     <div className="h-full overflow-y-auto hide-scroll overflow-x-hidden p-4 px-0">
       <AnimatePresence>
         {/* Habits Section */}
-        {habitTasks.length > 0 && (
+        {sortedHabitTasks.length > 0 && (
           <motion.div
             key="habits-section"
             className="mb-6 mt-3"
@@ -247,50 +220,73 @@ export function TaskList({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <motion.div
-              className="text-sm text-primary font-extrabold uppercase tracking-wide mb-3 flex items-center gap-2"
+            <motion.button
+              onClick={() => toggleSection("habits")}
+              className="w-full text-left text-sm text-primary font-extrabold uppercase tracking-wide mb-3 flex items-center gap-2 hover:text-primary/80 transition-colors"
               variants={headerVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
             >
-              <RotateCcw className="h-4 w-4" /> Habits
-            </motion.div>
-            <motion.div
-              className=""
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-            >
-              {habitTasks.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  holdingTask={holdingTask}
-                  holdProgress={holdProgress}
-                  onMouseDown={handleMouseDown}
-                  onTaskClick={handleTaskClick}
-                  onToggleExpanded={toggleExpanded}
-                  onAddSubtask={handleAddSubtask}
-                  formatTime={formatTime}
-                  getTagInfo={getTagInfo}
-                  getTotalTime={getTotalTime}
-                  getTotalFocusTime={getTotalFocusTime}
-                  isHabit={true}
-                  variants={taskVariants}
-                  isLastTask={task.id === habitTasks[habitTasks.length - 1].id}
-                  isExpanded={expandedTasks[task.id] || false}
-                  expandedTasks={expandedTasks}
-                  level={0}
-                />
-              ))}
-            </motion.div>
+              <motion.div
+                animate={{ rotate: collapsedSections.habits ? -90 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronDown className="h-4 w-4" />
+              </motion.div>
+              <RotateCcw className="h-4 w-4" />
+              Habits ({sortedHabitTasks.filter((t) => !t.completed).length}/
+              {sortedHabitTasks.length})
+            </motion.button>
+
+            <AnimatePresence>
+              {!collapsedSections.habits && (
+                <motion.div
+                  variants={sectionVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="overflow-hidden"
+                >
+                  <motion.div
+                    className=""
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                  >
+                    {sortedHabitTasks.map((task) => (
+                      <TaskItem
+                        key={task.id}
+                        task={task}
+                        onTaskClick={handleTaskClick}
+                        onToggleTask={handleToggleTask}
+                        onToggleExpanded={toggleExpanded}
+                        onAddSubtask={handleAddSubtask}
+                        formatTime={formatTime}
+                        getTagInfo={getTagInfo}
+                        getTotalTime={getTotalTime}
+                        getTotalFocusTime={getTotalFocusTime}
+                        isHabit={true}
+                        variants={taskVariants}
+                        isLastTask={
+                          task.id ===
+                          sortedHabitTasks[sortedHabitTasks.length - 1].id
+                        }
+                        isExpanded={expandedTasks[task.id] || false}
+                        expandedTasks={expandedTasks}
+                        level={0}
+                      />
+                    ))}
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
 
         {/* Regular Tasks Section */}
-        {regularTasks.length > 0 && (
+        {sortedRegularTasks.length > 0 && (
           <motion.div
             key="tasks-section"
             className="mb-6"
@@ -299,45 +295,65 @@ export function TaskList({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <motion.div
-              className="text-sm text-primary font-extrabold uppercase tracking-wide mb-3 flex items-center gap-2"
+            <motion.button
+              onClick={() => toggleSection("tasks")}
+              className="w-full text-left text-sm text-primary font-extrabold uppercase tracking-wide mb-3 flex items-center gap-2 hover:text-primary/80 transition-colors"
               variants={headerVariants}
               initial="hidden"
               animate="visible"
               exit="exit"
             >
-              <Calendar className="h-4 w-4" /> Tasks
-            </motion.div>
-            <motion.div
-              className=""
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-            >
-              {regularTasks.map((task, index) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  holdingTask={holdingTask}
-                  holdProgress={holdProgress}
-                  onMouseDown={handleMouseDown}
-                  onTaskClick={handleTaskClick}
-                  onToggleExpanded={toggleExpanded}
-                  onAddSubtask={handleAddSubtask}
-                  formatTime={formatTime}
-                  getTagInfo={getTagInfo}
-                  getTotalTime={getTotalTime}
-                  getTotalFocusTime={getTotalFocusTime}
-                  isHabit={false}
-                  variants={taskVariants}
-                  isLastTask={index === regularTasks.length - 1}
-                  isExpanded={expandedTasks[task.id] || false}
-                  expandedTasks={expandedTasks}
-                  level={0}
-                />
-              ))}
-            </motion.div>
+              <motion.div
+                animate={{ rotate: collapsedSections.tasks ? -90 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronDown className="h-4 w-4" />
+              </motion.div>
+              <Calendar className="h-4 w-4" />
+              Tasks ({sortedRegularTasks.filter((t) => !t.completed).length}/
+              {sortedRegularTasks.length})
+            </motion.button>
+
+            <AnimatePresence>
+              {!collapsedSections.tasks && (
+                <motion.div
+                  variants={sectionVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="overflow-hidden"
+                >
+                  <motion.div
+                    className=""
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                  >
+                    {sortedRegularTasks.map((task, index) => (
+                      <TaskItem
+                        key={task.id}
+                        task={task}
+                        onTaskClick={handleTaskClick}
+                        onToggleTask={handleToggleTask}
+                        onToggleExpanded={toggleExpanded}
+                        onAddSubtask={handleAddSubtask}
+                        formatTime={formatTime}
+                        getTagInfo={getTagInfo}
+                        getTotalTime={getTotalTime}
+                        getTotalFocusTime={getTotalFocusTime}
+                        isHabit={false}
+                        variants={taskVariants}
+                        isLastTask={index === sortedRegularTasks.length - 1}
+                        isExpanded={expandedTasks[task.id] || false}
+                        expandedTasks={expandedTasks}
+                        level={0}
+                      />
+                    ))}
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
 
@@ -360,10 +376,8 @@ export function TaskList({
 
 function TaskItem({
   task,
-  holdingTask,
-  holdProgress,
-  onMouseDown,
   onTaskClick,
+  onToggleTask,
   onToggleExpanded,
   onAddSubtask,
   formatTime,
@@ -391,44 +405,37 @@ function TaskItem({
     ? task.focusTime || 0
     : getTotalFocusTime(task);
 
-  const paddingLeft = level * 20;
+  // Sort subtasks: incomplete first, then completed
+  const sortedSubtasks = [...subtasks].sort((a, b) => {
+    if (a.completed === b.completed) return 0;
+    return a.completed ? 1 : -1;
+  });
+
+  // Calculate proper indentation - only apply to parent tasks with subtasks
+  const shouldIndent = hasSubtasks && !isSubtask && level === 0;
+  const paddingLeft = isSubtask ? 30 : shouldIndent ? 0 : 0;
 
   return (
     <>
       <motion.div
         variants={variants}
         layout
-        className={`group relative border-t border-dashed cursor-pointer select-none overflow-hidden ${
-          task.completed
-            ? ""
-            : "border-primary/50 dark:border-primary-700 hover:bg-primary/5"
+        className={`group relative border-t border-dashed cursor-pointer border-primary/50 dark:border-primary-700 select-none overflow-hidden ${
+          task.completed ? "" : "hover:bg-primary/5"
         } 
         ${isLastTask && (!hasSubtasks || !isExpanded) ? "border-b" : ""}`}
         style={{ paddingLeft: `${paddingLeft}px` }}
-        onMouseDown={(e) => onMouseDown(task.id, e)}
-        onTouchStart={(e) => onMouseDown(task.id, e)}
         onClick={(e) => onTaskClick(task, e)}
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.98 }}
       >
-        {/* Hold Progress Bar */}
-        {holdingTask === task.id && (
-          <motion.div
-            className="absolute inset-0 bg-primary/20"
-            initial={{ width: 0 }}
-            animate={{ width: `${holdProgress}%` }}
-            transition={{ duration: 0.1 }}
-            layout
-          />
-        )}
-
         <div className="flex items-center justify-between relative z-10 p-4">
           <div className="flex items-center gap-3 flex-1">
             {/* Expand/Collapse button for main tasks with subtasks */}
             {hasSubtasks && !isSubtask && (
               <motion.button
                 onClick={(e) => onToggleExpanded(task.id, e)}
-                className="flex-shrink-0 p-1.5 hover:bg-primary/10 dark:hover:bg-primary/20 rounded-lg transition-all duration-200"
+                className="flex-shrink-0 p-1.5 -ml-2 hover:text-primary/80 dark:hover:text-primary/80 rounded-lg transition-all duration-200"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
               >
@@ -436,7 +443,7 @@ function TaskItem({
                   animate={{ rotate: isExpanded ? 90 : 0 }}
                   transition={{ duration: 0.2, ease: "easeOut" }}
                 >
-                  <ChevronRight className="h-4 w-4 text-primary dark:text-primary" />
+                  <ChevronRight className="h-4 w-4" />
                 </motion.div>
               </motion.button>
             )}
@@ -473,7 +480,6 @@ function TaskItem({
 
               <motion.span
                 animate={{
-                  scale: holdingTask === task.id ? 0.98 : 1,
                   opacity: task.completed ? 0.7 : 1,
                 }}
                 className={`block font-extrabold text-lg ${
@@ -519,37 +525,42 @@ function TaskItem({
             </motion.button>
           )}
 
-          {/* Completion Animation */}
-          {task.completed && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="flex-shrink-0 w-6 h-6 bg-primary rounded-full flex items-center justify-center z-20"
-            >
-              <motion.div
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="text-background"
-              >
-                <Check className="h-3 w-3" />
-              </motion.div>
-            </motion.div>
-          )}
+          {/* Completion Circle */}
+          <motion.button
+            onClick={(e) => onToggleTask(task.id, e)}
+            className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+              task.completed
+                ? "bg-primary border-primary"
+                : "border-primary/40 hover:border-primary hover:bg-primary/10"
+            }`}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <AnimatePresence>
+              {task.completed && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Check className="h-3 w-3 text-white" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.button>
         </div>
       </motion.div>
 
-      {/* Render subtasks immediately without any animation */}
+      {/* Render subtasks with proper sorting */}
       {hasSubtasks && isExpanded && (
         <div>
-          {subtasks.map((subtask, subIndex) => (
+          {sortedSubtasks.map((subtask, subIndex) => (
             <TaskItem
               key={subtask.id}
               task={subtask}
-              holdingTask={holdingTask}
-              holdProgress={holdProgress}
-              onMouseDown={onMouseDown}
               onTaskClick={onTaskClick}
+              onToggleTask={onToggleTask}
               onToggleExpanded={onToggleExpanded}
               onAddSubtask={onAddSubtask}
               formatTime={formatTime}
@@ -558,7 +569,7 @@ function TaskItem({
               getTotalFocusTime={getTotalFocusTime}
               isHabit={false}
               variants={variants}
-              isLastTask={subIndex === subtasks.length - 1 && isLastTask}
+              isLastTask={subIndex === sortedSubtasks.length - 1 && isLastTask}
               isExpanded={false}
               expandedTasks={expandedTasks}
               level={level + 1}
