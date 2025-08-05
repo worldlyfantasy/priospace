@@ -985,7 +985,7 @@ export default function Home() {
                 />
               </div>
 
-              <div className="p-4 border-t border-dashed dark:border-gray-700">
+              <div className="p-4 border-t border-dashed dark:border-gray-700 absolute bottom-0 left-1/2 -translate-x-1/2 bg-background/70 backdrop-blur-sm w-full z-50">
                 <div className="flex items-center justify-between">
                   <Button
                     onClick={() => setShowTimer(true)}

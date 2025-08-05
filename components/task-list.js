@@ -208,7 +208,7 @@ export function TaskList({
   };
 
   return (
-    <div className="h-full overflow-y-auto hide-scroll overflow-x-hidden p-4 px-0">
+    <div className="h-full overflow-y-auto hide-scroll overflow-x-hidden p-4 px-0 pb-[3.54rem]">
       <AnimatePresence>
         {/* Habits Section */}
         {sortedHabitTasks.length > 0 && (
@@ -235,7 +235,7 @@ export function TaskList({
                 <ChevronDown className="h-4 w-4" />
               </motion.div>
               <RotateCcw className="h-4 w-4" />
-              Habits ({sortedHabitTasks.filter((t) => !t.completed).length}/
+              Habits ({sortedHabitTasks.filter((t) => t.completed).length}/
               {sortedHabitTasks.length})
             </motion.button>
 
@@ -310,7 +310,7 @@ export function TaskList({
                 <ChevronDown className="h-4 w-4" />
               </motion.div>
               <Calendar className="h-4 w-4" />
-              Tasks ({sortedRegularTasks.filter((t) => !t.completed).length}/
+              Tasks ({sortedRegularTasks.filter((t) => t.completed).length}/
               {sortedRegularTasks.length})
             </motion.button>
 
@@ -531,7 +531,7 @@ function TaskItem({
             className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
               task.completed
                 ? "bg-primary border-primary"
-                : "border-primary/40 hover:border-primary hover:bg-primary/10"
+                : "border-primary/30 hover:border-primary hover:bg-primary/10 border-dotted"
             }`}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}

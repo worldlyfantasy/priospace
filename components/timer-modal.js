@@ -51,6 +51,23 @@ export function TimerModal({
   const audioSourcesRef = useRef({});
   const gainNodesRef = useRef({});
   const isInitializedRef = useRef(false);
+  const completeAudioRef = useRef(null);
+
+  if (typeof window !== "undefined") {
+    if (!completeAudioRef.current) {
+      completeAudioRef.current = new Audio("/music/complete.mp3");
+      completeAudioRef.current.volume = 0.3;
+    }
+  }
+
+  const playCompleteSound = () => {
+    if (completeAudioRef.current) {
+      completeAudioRef.current.currentTime = 0;
+      completeAudioRef.current
+        .play()
+        .catch((e) => console.log("Complete sound play failed:", e));
+    }
+  };
 
   const presets = [
     { value: "5", label: "5 min", seconds: 5 * 60 },
@@ -441,6 +458,7 @@ export function TimerModal({
 
       onToggleTask(selectedTask);
     }
+    playCompleteSound();
     stopAllAudio();
     onClose();
   };
