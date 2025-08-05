@@ -6,7 +6,7 @@ import { DayNightCycle, AnimatedNumber } from "@/components/day-night-cycle";
 import { AnimatedYear } from "@/components/animated-year";
 import { WeeklyCalendar } from "@/components/weekly-calender";
 import { TaskList } from "@/components/task-list";
-import { Timer, Plus, BarChart3, Settings } from "lucide-react";
+import { Timer, Plus, BarChart3, Settings, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddTaskModal } from "@/components/add-task-modal";
 import { TaskOptionsModal } from "@/components/task-options-modal";
@@ -95,7 +95,15 @@ export default function Home() {
     const root = document.documentElement;
 
     // Remove all theme classes
-    root.classList.remove("theme-nature", "theme-neo-brutal", "theme-modern");
+    root.classList.remove(
+      "theme-nature",
+      "theme-neo-brutal",
+      "theme-modern",
+      "theme-pastel-dream",
+      "theme-quantum-rose",
+      "theme-twitter",
+      "theme-amber-minimal"
+    );
 
     // Add current theme class (except for default)
     if (theme !== "default") {
@@ -927,7 +935,8 @@ export default function Home() {
 
       {!showIntroScreen && (
         <div className="min-h-screen transition-colors duration-300 bg-background">
-          <div className="max-w-lg mx-auto min-h-screen px-4 relative overflow-hidden">
+          {/* Mobile/Tablet Layout (up to lg) */}
+          <div className="lg:hidden max-w-lg mx-auto min-h-screen px-4 relative overflow-hidden">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -985,7 +994,7 @@ export default function Home() {
                 />
               </div>
 
-              <div className="p-4 border-t border-dashed dark:border-gray-700 absolute bottom-0 left-1/2 -translate-x-1/2 bg-background/70 backdrop-blur-sm w-full z-50">
+              <div className="p-4 border-t border-dashed absolute bottom-0 left-1/2 -translate-x-1/2 bg-background/70 backdrop-blur-sm w-full z-50">
                 <div className="flex items-center justify-between">
                   <Button
                     onClick={() => setShowTimer(true)}
@@ -1021,99 +1030,228 @@ export default function Home() {
                 </div>
               </div>
             </motion.div>
-
-            <AnimatePresence>
-              {showSettings && (
-                <SettingsModal
-                  onClose={() => setShowSettings(false)}
-                  darkMode={darkMode}
-                  onToggleDarkMode={() => setDarkMode(!darkMode)}
-                  theme={theme}
-                  onThemeChange={setTheme}
-                  onExportData={exportData}
-                  onImportData={importData}
-                  onOpenWebRTCShare={() => setShowWebRTCShare(true)}
-                />
-              )}
-
-              {showWebRTCShare && (
-                <WebRTCShareModal
-                  onClose={() => setShowWebRTCShare(false)}
-                  dailyTasks={dailyTasks}
-                  customTags={customTags}
-                  habits={habits}
-                  darkMode={darkMode}
-                  theme={theme}
-                  onImportData={importDataFromWebRTC}
-                />
-              )}
-
-              {showAddTask && (
-                <AddTaskModal
-                  onClose={() => setShowAddTask(false)}
-                  onAddTask={addTask}
-                  customTags={customTags}
-                  onAddCustomTag={addCustomTag}
-                  selectedDate={selectedDate}
-                />
-              )}
-
-              {showAddSubtask && parentTaskForSubtask && (
-                <AddSubtaskModal
-                  onClose={() => {
-                    setShowAddSubtask(false);
-                    setParentTaskForSubtask(null);
-                  }}
-                  onAddSubtask={(title, tagId) => {
-                    addSubtask(parentTaskForSubtask.id, title, tagId);
-                  }}
-                  customTags={customTags}
-                  onAddCustomTag={addCustomTag}
-                  parentTask={parentTaskForSubtask}
-                />
-              )}
-
-              {showTaskOptions && selectedTask && (
-                <TaskOptionsModal
-                  task={selectedTask}
-                  customTags={customTags}
-                  onClose={() => {
-                    setShowTaskOptions(false);
-                    setSelectedTask(null);
-                  }}
-                  onUpdateTask={updateTask}
-                  onDeleteTask={deleteTask}
-                  onAddCustomTag={addCustomTag}
-                  onToggleTask={toggleTask}
-                  selectedDate={selectedDate}
-                  onTransferTask={transferTaskToCurrentDay}
-                  currentActualDate={new Date()}
-                  onAddSubtask={handleAddSubtask}
-                  allTasks={allTasks}
-                />
-              )}
-
-              {showHabits && (
-                <HabitTracker
-                  habits={habits}
-                  customTags={customTags}
-                  onClose={() => setShowHabits(false)}
-                  onUpdateHabits={setHabits}
-                  onAddCustomTag={addCustomTag}
-                />
-              )}
-
-              {showTimer && (
-                <TimerModal
-                  tasks={flatTaskList} // Use flattened list for timer
-                  onClose={() => setShowTimer(false)}
-                  onUpdateTaskTime={updateTaskTime}
-                  onUpdateTaskFocusTime={updateTaskFocusTime}
-                  onToggleTask={toggleTask}
-                />
-              )}
-            </AnimatePresence>
           </div>
+
+          {/* Desktop Layout (lg and up) */}
+          <div className="hidden lg:flex max-h-screen h-screen overflow-hidden">
+            {/* Left Sidebar - Calendar & Navigation */}
+            <div className="w-lg border-r border-dashed flex flex-col bg-background/50 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+                className="flex flex-col h-full"
+              >
+                {/* Settings Button */}
+                <div className="p-6 border-b border-dashed flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-2xl font-extrabold">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <CheckCircle className="h-4 w-4 text-primary" />
+                    </div>
+                    Prio Space
+                  </div>
+                  <button
+                    onClick={() => setShowSettings(true)}
+                    className="bg-primary text-background rounded-lg py-3 px-4 hover:bg-primary/90 transition-colors"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Date Header */}
+                <div className="p-4 border-b border-dashed px-6">
+                  <div className="flex items-center justify-between">
+                    <DayNightCycle selectedDate={selectedDate} />
+                    <div className="flex items-center gap-2">
+                      <div className="text-right flex flex-col">
+                        <div className="text-xl font-extrabold flex items-center gap-2">
+                          <AnimatedNumber
+                            value={selectedDate.getDate()}
+                            fontSize={20}
+                          />
+                          {selectedDate.toLocaleDateString("en-US", {
+                            month: "long",
+                          })}
+                        </div>
+                        <div className="text-xl opacity-90 -mt-1 flex justify-end">
+                          <AnimatedYear
+                            year={selectedDate.getFullYear()}
+                            fontSize={30}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Calendar */}
+                <div className="p-6 border-b border-dashed">
+                  <WeeklyCalendar
+                    selectedDate={selectedDate}
+                    onDateSelect={setSelectedDate}
+                  />
+                </div>
+
+                {/* Desktop Action Buttons */}
+                <div className="p-6 space-y-4 flex-1">
+                  <Button
+                    onClick={() => setShowAddTask(true)}
+                    size="lg"
+                    className="w-full h-12 bg-primary hover:bg-primary/90 group hover:scale-[1.02] transition-all duration-200 [&_svg]:size-5 rounded-2xl"
+                  >
+                    <Plus className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" />
+                    <span className="font-extrabold">Add Task</span>
+                  </Button>
+
+                  <Button
+                    onClick={() => setShowTimer(true)}
+                    variant="outline"
+                    size="lg"
+                    className="w-full h-12 font-bold hover:bg-accent/50 group hover:scale-[1.02] transition-all duration-200 rounded-2xl"
+                  >
+                    <Timer className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" />
+                    <span className="font-extrabold">Timer</span>
+                  </Button>
+
+                  <Button
+                    onClick={() => setShowHabits(true)}
+                    variant="outline"
+                    size="lg"
+                    className="w-full h-12 font-bold hover:bg-accent/50 group hover:scale-[1.02] transition-all duration-200 rounded-2xl"
+                  >
+                    <BarChart3 className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" />
+                    <span className="font-extrabold">Habits</span>
+                  </Button>
+                </div>
+
+                {/* Keyboard shortcuts hint */}
+                <div className="p-6 pt-0 text-[10px] text-muted-foreground font-extrabold space-y-1 opacity-70">
+                  <div>⌘/Ctrl + A → Add Task</div>
+                  <div>⌘/Ctrl + C → Timer</div>
+                  <div>⌘/Ctrl + H → Habits</div>
+                  <div>⌘/Ctrl + X → Settings</div>
+                  <div>Esc → Close Modal</div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="flex-1 overflow-hidden relative"
+              >
+                {/* Task List */}
+                <div className="absolute top-0 left-0 h-full w-full overflow-auto hide-scroll">
+                  <div className="p-6 mt-[4px]">
+                    <TaskList
+                      tasks={allTasks}
+                      customTags={customTags}
+                      onToggleTask={toggleTask}
+                      onDeleteTask={deleteTask}
+                      onTaskClick={handleTaskClick}
+                      onAddSubtask={handleAddSubtask}
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Modals - Same for both layouts */}
+          <AnimatePresence>
+            {showSettings && (
+              <SettingsModal
+                onClose={() => setShowSettings(false)}
+                darkMode={darkMode}
+                onToggleDarkMode={() => setDarkMode(!darkMode)}
+                theme={theme}
+                onThemeChange={setTheme}
+                onExportData={exportData}
+                onImportData={importData}
+                onOpenWebRTCShare={() => setShowWebRTCShare(true)}
+              />
+            )}
+
+            {showWebRTCShare && (
+              <WebRTCShareModal
+                onClose={() => setShowWebRTCShare(false)}
+                dailyTasks={dailyTasks}
+                customTags={customTags}
+                habits={habits}
+                darkMode={darkMode}
+                theme={theme}
+                onImportData={importDataFromWebRTC}
+              />
+            )}
+
+            {showAddTask && (
+              <AddTaskModal
+                onClose={() => setShowAddTask(false)}
+                onAddTask={addTask}
+                customTags={customTags}
+                onAddCustomTag={addCustomTag}
+                selectedDate={selectedDate}
+              />
+            )}
+
+            {showAddSubtask && parentTaskForSubtask && (
+              <AddSubtaskModal
+                onClose={() => {
+                  setShowAddSubtask(false);
+                  setParentTaskForSubtask(null);
+                }}
+                onAddSubtask={(title, tagId) => {
+                  addSubtask(parentTaskForSubtask.id, title, tagId);
+                }}
+                customTags={customTags}
+                onAddCustomTag={addCustomTag}
+                parentTask={parentTaskForSubtask}
+              />
+            )}
+
+            {showTaskOptions && selectedTask && (
+              <TaskOptionsModal
+                task={selectedTask}
+                customTags={customTags}
+                onClose={() => {
+                  setShowTaskOptions(false);
+                  setSelectedTask(null);
+                }}
+                onUpdateTask={updateTask}
+                onDeleteTask={deleteTask}
+                onAddCustomTag={addCustomTag}
+                onToggleTask={toggleTask}
+                selectedDate={selectedDate}
+                onTransferTask={transferTaskToCurrentDay}
+                currentActualDate={new Date()}
+                onAddSubtask={handleAddSubtask}
+                allTasks={allTasks}
+              />
+            )}
+
+            {showHabits && (
+              <HabitTracker
+                habits={habits}
+                customTags={customTags}
+                onClose={() => setShowHabits(false)}
+                onUpdateHabits={setHabits}
+                onAddCustomTag={addCustomTag}
+              />
+            )}
+
+            {showTimer && (
+              <TimerModal
+                tasks={flatTaskList} // Use flattened list for timer
+                onClose={() => setShowTimer(false)}
+                onUpdateTaskTime={updateTaskTime}
+                onUpdateTaskFocusTime={updateTaskFocusTime}
+                onToggleTask={toggleTask}
+              />
+            )}
+          </AnimatePresence>
         </div>
       )}
     </>

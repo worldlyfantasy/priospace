@@ -68,6 +68,46 @@ export function SettingsModal({
         background: "#FFFFFF",
       },
     },
+    {
+      id: "pastel-dream",
+      name: "Pastel Dream",
+      description: "Soft lavender & pink tones",
+      preview: {
+        primary: "#D67AD2",
+        secondary: "#A2DCEF",
+        background: "#F8F4FF",
+      },
+    },
+    {
+      id: "quantum-rose",
+      name: "Quantum Rose",
+      description: "Vibrant pink & teal fusion",
+      preview: {
+        primary: "#D93A7D",
+        secondary: "#2DD8C6",
+        background: "#FFF5FA",
+      },
+    },
+    {
+      id: "twitter",
+      name: "Twitter",
+      description: "Blues & clean contrast",
+      preview: {
+        primary: "#1DA1F2",
+        secondary: "#F7F9F9",
+        background: "#F5F8FA",
+      },
+    },
+    {
+      id: "amber-minimal",
+      name: "Amber Minimal",
+      description: "Clean amber & white minimalism",
+      preview: {
+        primary: "#F59E0B",
+        secondary: "#E0E7FF",
+        background: "#FFFFFF",
+      },
+    },
   ];
 
   // Animation variants
@@ -276,7 +316,7 @@ export function SettingsModal({
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   {themes.map((themeData) => (
                     <motion.button
                       key={themeData.id}
@@ -481,10 +521,10 @@ export function SettingsModal({
             >
               <div className="text-center space-y-3">
                 <div className="text-lg font-extrabold text-primary">
-                  Prio Space V1.2.0
+                  Prio Space V1.3.0
                 </div>
                 <div className="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                  Focus • Track • Share • Achieve
+                  Focus • Track • Achieve
                 </div>
 
                 {/* vibecoded section */}
