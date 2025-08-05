@@ -371,7 +371,7 @@ export function TaskOptionsModal({
                 </div>
               ) : (
                 <div className="flex items-center justify-between p-4 px-0 h-10 rounded-xl ">
-                  <span className="font-extrabold text-2xl">
+                  <span className="font-extrabold text-2xl line-clamp-1">
                     {editTitle || task.title}
                   </span>
                   <motion.div

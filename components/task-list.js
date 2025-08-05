@@ -430,7 +430,7 @@ function TaskItem({
       >
         <div className="flex items-center justify-between relative z-10">
           <div
-            className="flex items-center gap-3 flex-1 p-4"
+            className="flex items-center gap-3 flex-1 p-4 line-clamp-1"
             onClick={(e) => onTaskClick(task, e)}
           >
             {/* Expand/Collapse button for main tasks with subtasks */}
@@ -528,29 +528,33 @@ function TaskItem({
           )}
 
           {/* Completion Circle */}
-          <motion.button
+          <div
+            className="flex-shrink-0 h-12 w-12 flex items-center justify-center"
             onClick={(e) => onToggleTask(task.id, e)}
-            className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 mr-4 ${
-              task.completed
-                ? "bg-primary border-primary"
-                : "border-primary/50 hover:border-primary hover:bg-primary/10 border-dotted"
-            }`}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
           >
-            <AnimatePresence>
-              {task.completed && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Check className="h-3 w-3 text-white" />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.button>
+            <motion.button
+              className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 mr-4 ${
+                task.completed
+                  ? "bg-primary border-primary"
+                  : "border-primary/50 hover:border-primary hover:bg-primary/10 border-dotted"
+              }`}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <AnimatePresence>
+                {task.completed && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Check className="h-3 w-3 text-white" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
+          </div>
         </div>
       </motion.div>
 

@@ -245,6 +245,7 @@ export default function Home() {
         newSubtasks: 0,
         newTags: 0,
         newHabits: 0,
+        updatedTasks: 0, // MODIFICATION: Added for better feedback
         updatedSettings: [],
       };
 
@@ -284,7 +285,7 @@ export default function Home() {
         });
       }
 
-      // 2. Merge Daily Tasks (with proper tag mapping)
+      // 2. Merge Daily Tasks (with proper tag mapping and completion sync)
       if (data.dailyTasks) {
         setDailyTasks((prevDailyTasks) => {
           const mergedDailyTasks = { ...prevDailyTasks };
@@ -303,11 +304,8 @@ export default function Home() {
 
               return {
                 ...task,
-                id: `${Date.now()}-${Math.random()
-                  .toString(36)
-                  .substring(2, 8)}-${Math.random()
-                  .toString(36)
-                  .substring(2, 4)}`, // Generate new ID to avoid conflicts
+                // We keep original IDs for matching, but will generate new ones for new tasks
+                originalId: task.id,
                 createdAt: new Date(task.createdAt),
                 focusTime: task.focusTime || 0,
                 timeSpent: task.timeSpent || 0,
@@ -322,11 +320,8 @@ export default function Home() {
 
                   return {
                     ...subtask,
-                    id: `${Date.now()}-${Math.random()
-                      .toString(36)
-                      .substring(2, 8)}-subtask-${Math.random()
-                      .toString(36)
-                      .substring(2, 4)}`,
+                    // Keep original IDs for matching
+                    originalId: subtask.id,
                     createdAt: new Date(subtask.createdAt || task.createdAt),
                     focusTime: subtask.focusTime || 0,
                     timeSpent: subtask.timeSpent || 0,
@@ -340,36 +335,74 @@ export default function Home() {
               };
             });
 
-            // Check for truly duplicate tasks (by title and date)
-            const newTasks = [];
+            const newOrUpdatedTasksForDate = [...existingTasks];
 
             processedIncomingTasks.forEach((incomingTask) => {
-              // Check if task already exists by title (more reliable than ID since we generate new IDs)
-              const existingTask = existingTasks.find(
+              // Find existing task by title (more reliable than ID across different clients)
+              const existingTaskIndex = newOrUpdatedTasksForDate.findIndex(
                 (existing) =>
                   existing.title.toLowerCase().trim() ===
                     incomingTask.title.toLowerCase().trim() && !existing.isHabit
               );
 
-              if (!existingTask) {
-                // Completely new task
-                newTasks.push(incomingTask);
+              if (existingTaskIndex === -1) {
+                // Completely new task - generate new ID to avoid conflicts
+                const newTaskId = `${Date.now()}-${Math.random()
+                  .toString(36)
+                  .substring(2, 8)}-${Math.random()
+                  .toString(36)
+                  .substring(2, 4)}`;
+
+                newOrUpdatedTasksForDate.push({
+                  ...incomingTask,
+                  id: newTaskId,
+                  subtasks: (incomingTask.subtasks || []).map((subtask) => ({
+                    ...subtask,
+                    id: `${newTaskId}-subtask-${Date.now()}-${Math.random()
+                      .toString(36)
+                      .substring(2, 8)}`,
+                    parentTaskId: newTaskId,
+                  })),
+                });
+
                 importStats.newTasks++;
-                // Count subtasks as well
                 importStats.newSubtasks += (incomingTask.subtasks || []).length;
               } else {
-                // Task exists, check for new subtasks
+                // --- MODIFICATION START: Sync logic for existing tasks ---
+
+                const existingTask =
+                  newOrUpdatedTasksForDate[existingTaskIndex];
+                let taskWasUpdated = false;
+
+                // 1. Sync parent task completion status
+                const updatedCompletedStatus = incomingTask.completed;
+                if (existingTask.completed !== updatedCompletedStatus) {
+                  existingTask.completed = updatedCompletedStatus;
+                  taskWasUpdated = true;
+                }
+
+                // 2. Sync subtasks
                 const mergedSubtasks = [...(existingTask.subtasks || [])];
 
                 (incomingTask.subtasks || []).forEach((incomingSubtask) => {
-                  const existingSubtask = mergedSubtasks.find(
+                  const existingSubtaskIndex = mergedSubtasks.findIndex(
                     (existing) =>
                       existing.title.toLowerCase().trim() ===
                       incomingSubtask.title.toLowerCase().trim()
                   );
 
-                  if (!existingSubtask) {
-                    // Generate new ID for subtask
+                  if (existingSubtaskIndex !== -1) {
+                    // Subtask exists: update its completion status
+                    const existingSubtask =
+                      mergedSubtasks[existingSubtaskIndex];
+                    if (
+                      existingSubtask.completed !== incomingSubtask.completed
+                    ) {
+                      existingSubtask.completed = incomingSubtask.completed;
+                      taskWasUpdated = true;
+                    }
+                  } else {
+                    // New subtask for an existing task: add it
                     const newSubtaskId = `${
                       existingTask.id
                     }-subtask-${Date.now()}-${Math.random()
@@ -381,24 +414,21 @@ export default function Home() {
                       parentTaskId: existingTask.id,
                     });
                     importStats.newSubtasks++;
+                    taskWasUpdated = true; // Adding a subtask is an update
                   }
                 });
 
-                // Update existing task with merged subtasks
-                const taskIndex = existingTasks.findIndex(
-                  (t) => t.id === existingTask.id
-                );
-                if (taskIndex !== -1) {
-                  existingTasks[taskIndex] = {
-                    ...existingTask,
-                    subtasks: mergedSubtasks,
-                  };
+                // 3. Update the task in the array if anything changed
+                if (taskWasUpdated) {
+                  existingTask.subtasks = mergedSubtasks;
+                  newOrUpdatedTasksForDate[existingTaskIndex] = existingTask;
+                  importStats.updatedTasks++;
                 }
+                // --- MODIFICATION END ---
               }
             });
 
-            // Merge new tasks with existing ones
-            mergedDailyTasks[dateKey] = [...existingTasks, ...newTasks];
+            mergedDailyTasks[dateKey] = newOrUpdatedTasksForDate;
           });
 
           return mergedDailyTasks;
@@ -408,56 +438,48 @@ export default function Home() {
       // 3. Merge Habits (with proper tag mapping)
       if (data.habits) {
         setHabits((prevHabits) => {
-          const newHabits = [];
+          const updatedHabits = [...prevHabits];
 
           data.habits.forEach((incomingHabit) => {
-            const existingHabit = prevHabits.find(
+            const existingHabitIndex = updatedHabits.findIndex(
               (existing) =>
                 existing.name.toLowerCase().trim() ===
                 incomingHabit.name.toLowerCase().trim()
             );
 
-            if (!existingHabit) {
-              // Map the tag ID for the new habit
+            if (existingHabitIndex === -1) {
+              // New Habit
               const mappedTagId =
                 incomingHabit.tag && tagMapping.has(incomingHabit.tag)
                   ? tagMapping.get(incomingHabit.tag)
                   : incomingHabit.tag;
-
-              // Generate new ID to avoid conflicts
               const newHabitId = `${Date.now()}-${Math.random()
                 .toString(36)
                 .substring(2, 8)}`;
-              newHabits.push({
+              updatedHabits.push({
                 ...incomingHabit,
                 id: newHabitId,
-                tag: mappedTagId, // Use mapped tag ID
+                tag: mappedTagId,
                 completedDates: incomingHabit.completedDates || [],
               });
               importStats.newHabits++;
             } else {
-              // Merge completion dates for existing habits
+              // Existing Habit: Merge completion dates
+              const existingHabit = updatedHabits[existingHabitIndex];
               const mergedCompletedDates = [
                 ...new Set([
                   ...(existingHabit.completedDates || []),
                   ...(incomingHabit.completedDates || []),
                 ]),
               ];
-
-              // Update existing habit with merged completion dates
-              const habitIndex = prevHabits.findIndex(
-                (h) => h.id === existingHabit.id
-              );
-              if (habitIndex !== -1) {
-                prevHabits[habitIndex] = {
-                  ...existingHabit,
-                  completedDates: mergedCompletedDates,
-                };
-              }
+              updatedHabits[existingHabitIndex] = {
+                ...existingHabit,
+                completedDates: mergedCompletedDates,
+              };
             }
           });
 
-          return [...prevHabits, ...newHabits];
+          return updatedHabits;
         });
       }
 
@@ -493,6 +515,9 @@ export default function Home() {
       const summaryParts = [];
       if (importStats.newTasks > 0)
         summaryParts.push(`${importStats.newTasks} new task(s)`);
+      if (importStats.updatedTasks > 0)
+        // MODIFICATION: Added to summary
+        summaryParts.push(`${importStats.updatedTasks} updated task(s)`);
       if (importStats.newSubtasks > 0)
         summaryParts.push(`${importStats.newSubtasks} new subtask(s)`);
       if (importStats.newTags > 0)
@@ -504,26 +529,27 @@ export default function Home() {
           `updated ${importStats.updatedSettings.join(" and ")}`
         );
 
-      const totalNewItems =
+      const totalChanges =
         importStats.newTasks +
+        importStats.updatedTasks + // MODIFICATION: Added to total
         importStats.newSubtasks +
         importStats.newTags +
         importStats.newHabits;
 
-      if (totalNewItems === 0 && importStats.updatedSettings.length === 0) {
+      if (totalChanges === 0 && importStats.updatedSettings.length === 0) {
         alert(
-          "Import completed! No new items were found - all data was already present."
+          "Sync completed! No new items were found - all data was already in sync."
         );
       } else {
         const summaryMessage =
           summaryParts.length > 0
-            ? `Import successful! Added: ${summaryParts.join(", ")}.`
-            : "Import completed!";
+            ? `Sync successful! Merged/Updated: ${summaryParts.join(", ")}.`
+            : "Sync completed!";
         alert(summaryMessage);
       }
     } catch (error) {
       console.error("Import error:", error);
-      alert("Error importing data. Please try again.");
+      alert("Error processing synced data. Please try again.");
     }
   };
 
@@ -951,7 +977,11 @@ export default function Home() {
               </button>
 
               {/* Header Section */}
-              <div className="p-4 px-0 border-b border-dashed">
+              <motion.div
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setSelectedDate(new Date())}
+                className="p-4 px-0 border-b border-dashed"
+              >
                 <div className="flex items-center justify-between">
                   <DayNightCycle selectedDate={selectedDate} />
                   <div className="flex items-center gap-2">
@@ -974,7 +1004,7 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
               <div className="py-3 border-b border-dashed">
                 <WeeklyCalendar
@@ -1059,7 +1089,11 @@ export default function Home() {
                 </div>
 
                 {/* Date Header */}
-                <div className="p-4 border-b border-dashed px-6">
+                <motion.div
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setSelectedDate(new Date())}
+                  className="p-4 border-b border-dashed px-6"
+                >
                   <div className="flex items-center justify-between">
                     <DayNightCycle selectedDate={selectedDate} />
                     <div className="flex items-center gap-2">
@@ -1082,7 +1116,7 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
 
                 {/* Calendar */}
                 <div className="p-6 border-b border-dashed">
