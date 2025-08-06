@@ -124,7 +124,7 @@ export default function LandingPage() {
         animate="visible"
       >
         {/* Hero Section */}
-        <section className="container space-y-6 py-8 md:py-12 lg:py-32">
+        <section className="container min-h-screen space-y-6 -mt-14 flex items-center justify-center">
           <div className="mx-auto flex max-w-[58rem] flex-col items-center space-y-4 text-center">
             <motion.div
               variants={fadeInUp}
@@ -214,66 +214,6 @@ export default function LandingPage() {
               </Button>
             </motion.div>
           </div>
-        </section>
-
-        {/* Features Section */}
-        <section className="container space-y-6 py-8 md:py-12 lg:py-24">
-          <motion.div
-            variants={staggerContainer}
-            className="mx-auto grid justify-center gap-4 sm:grid-cols-2 md:max-w-[64rem] md:grid-cols-3"
-          >
-            <motion.div variants={fadeInUp}>
-              <Card className="relative overflow-hidden">
-                <CardContent className="flex flex-col items-center space-y-4 p-6">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20">
-                    <Target className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div className="space-y-2 text-center">
-                    <h3 className="text-xl font-bold">Smart Task Management</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Organize tasks with subtasks, color-coded categories, and
-                      intuitive completion gestures for maximum productivity.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div variants={fadeInUp}>
-              <Card className="relative overflow-hidden">
-                <CardContent className="flex flex-col items-center space-y-4 p-6">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/20">
-                    <Zap className="h-6 w-6 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div className="space-y-2 text-center">
-                    <h3 className="text-xl font-bold">Pomodoro Timer</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Built-in Pomodoro timer with customizable presets, break
-                      tracking, and focus analytics to boost your concentration.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Added Habit Tracking Feature Card */}
-            <motion.div variants={fadeInUp}>
-              <Card className="relative overflow-hidden">
-                <CardContent className="flex flex-col items-center space-y-4 p-6">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/20">
-                    <LineChart className="h-6 w-6 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div className="space-y-2 text-center">
-                    <h3 className="text-xl font-bold">Habit Tracking</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Track your progress with a GitHub-style contribution graph
-                      and detailed analytics for a 90-day history.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </motion.div>
         </section>
 
         {/* GitHub Section */}
