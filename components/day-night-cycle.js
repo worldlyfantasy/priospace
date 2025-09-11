@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, useSpring } from "framer-motion";
+import { AnimatePresence, motion, useSpring } from "framer-motion";
 import { Sun, Moon } from "lucide-react";
 
 function AnimatedWeekday({ dayIndex, fontSize, textColor }) {
@@ -150,10 +150,20 @@ export function DayNightCycle({ selectedDate }) {
         <div className="text-4xl font-extrabold flex items-center">
           <AnimatedWeekday dayIndex={dayIndex} fontSize={32} />
         </div>
-        {isDay ? (
-          <Sun className="h-7 w-7 text-yellow-500" />
-        ) : (
-          <Moon className="h-7 w-7 text-blue-500" />
+        {isToday(selectedDate) && (
+          <AnimatePresence>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {isDay ? (
+                <Sun className="h-7 w-7 text-yellow-500" />
+              ) : (
+                <Moon className="h-7 w-7 text-blue-500" />
+              )}
+            </motion.div>
+          </AnimatePresence>
         )}
       </div>
     </div>
