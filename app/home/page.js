@@ -1,21 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import {
-  CheckCircle,
-  Timer,
-  RotateCcw,
-  Download,
-  Star,
-  Play,
-  Github,
-  ArrowRight,
-  Zap,
-  Users,
-  Target,
-  LineChart,
-  Coffee,
-} from "lucide-react";
+import { Star, Play, Github, Coffee, Grid2X2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -75,6 +61,17 @@ export default function LandingPage() {
 
   const handleStarGitHub = () => {
     window.open("https://github.com/anoyrc/priospace", "_blank");
+  };
+
+  const handleDownloadWindows = () => {
+    window.open(
+      "https://github.com/AnoyRC/priospace/releases/download/0.1.3/priospace_0.1.3_x64-setup.exe",
+      "_blank"
+    );
+  };
+
+  const handleDownloadiOS = () => {
+    window.open("https://github.com/AnoyRC/priospace", "_blank");
   };
 
   return (
@@ -149,7 +146,7 @@ export default function LandingPage() {
               <Button
                 variant="outline"
                 size="lg"
-                onClick={handleStartWebApp}
+                onClick={handleDownloadiOS}
                 className="gap-2 p-6 w-36 py-7 rounded-full text-xl font-extrabold"
                 asChild
               >
@@ -165,8 +162,30 @@ export default function LandingPage() {
               <Button
                 variant="outline"
                 size="lg"
-                onClick={handleDownloadMac}
-                className="gap-2 p-6 w-36 py-7 rounded-full text-xl font-extrabold"
+                onClick={handleDownloadWindows}
+                className="gap-1 p-6 w-36 py-7 rounded-full text-lg font-extrabold"
+                asChild
+              >
+                <motion.button
+                  variants={fadeInUp}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Grid2X2 className="h-4 w-4" />
+                  Windows
+                </motion.button>
+              </Button>
+            </motion.div>
+
+            <motion.div
+              variants={staggerContainer}
+              className="flex gap-4 flex-row"
+            >
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleStarGitHub}
+                className="gap-2 p-6 w-48 py-7 rounded-full text-xl font-extrabold"
                 asChild
               >
                 <motion.button

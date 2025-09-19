@@ -19,9 +19,8 @@ A beautiful, modern productivity app that combines task management with Pomodoro
 - Hold-to-complete gesture for mobile-friendly interaction
 - Separate sections for regular tasks and habits
 
-### 🌐 Real-time Collaboration (NEW)
-- **WebRTC-powered real-time collaboration** for shared workspaces
-- Live task updates across multiple users
+### 🌐 Task Sharing
+- **WebRTC-powered task sharing**
 - Peer-to-peer connection for instant synchronization
 - Share tasks and progress with team members in real-time
 - No server dependency for peer connections after initial handshake
@@ -35,7 +34,7 @@ A beautiful, modern productivity app that combines task management with Pomodoro
 - Music player-style controls (play/pause/stop)
 
 ### 🔄 Habit Tracking
-- GitHub-style contribution graph for 90-day habit history
+- GitHub-style contribution graph for 30-day habit history
 - Monthly view with visual intensity indicators
 - Individual habit tracking with daily completion
 - Interactive grid for marking habit completion
@@ -152,13 +151,6 @@ priospace/
 5. Break down complex tasks into manageable chunks
 6. Click **"Add Task"** to save
 
-### Real-time Collaboration
-1. Start the WebRTC server: `cd webrtc-server && npm run start`
-2. Share your workspace ID with team members
-3. Collaborate in real-time on tasks and projects
-4. See live updates as team members make changes
-5. All changes sync instantly without page refresh
-
 ### Using the Timer
 1. Select a task from your list
 2. Choose a timer preset (5, 10, 25, or 50 minutes)
@@ -172,19 +164,21 @@ priospace/
 1. Open the **Habit Tracker** from the bottom navigation
 2. Add new habits with categories
 3. Click on grid squares to mark daily completions
-4. View your 90-day progress with GitHub-style visualization
+4. View your 30-day progress with GitHub-style visualization
 5. Navigate between habit overview and individual habit views
 
 ### Theme Selection
-1. Access **Settings** to browse 4 beautiful themes
+1. Access **Settings** to browse 8 beautiful themes
 2. Choose from enhanced color schemes
 3. Experience seamless theme transitions
 4. Themes persist across sessions
 
 ### Managing Data
 1. Access **Settings** to:
-   - Select from 4 stunning themes
+   - Select from 8 stunning themes
    - Toggle between light and dark modes
+   - Auto Start Feature for Windows & Mac
+   - P2P Task Sync Feature
    - Export your data as JSON backup
    - Import previously exported data
    - Support the developer with "Buy Me a Coffee"
@@ -211,25 +205,6 @@ The app now supports 4 themes. Update theme configurations in your settings:
   --primary: your-color-hue your-color-saturation your-color-lightness;
   --theme-variant: your-theme-name;
 }
-```
-
-### Timer Presets
-Modify the timer presets in `TimerModal.tsx`:
-
-```javascript
-const presets = [
-  { value: "5", label: "5 min", seconds: 5 * 60 },
-  { value: "15", label: "15 min", seconds: 15 * 60 },
-  // Add your custom presets
-];
-```
-
-### Subtask Configuration
-Customize subtask behavior in your task components:
-
-```javascript
-const maxSubtasks = 10; // Limit subtasks per task
-const subtaskDepth = 2;  // Maximum nesting level
 ```
 
 ## 🌐 WebRTC Server Instructions
@@ -278,10 +253,9 @@ For production deployment of the WebRTC server:
 
 ### Development Guidelines
 - Follow the existing code style and component patterns
-- Use TypeScript for type safety
 - Add appropriate animations with Framer Motion
 - Ensure responsive design works on all screen sizes
-- Test all 4 themes for consistency
+- Test all 8 themes for consistency
 - Test WebRTC functionality with multiple peers
 - Maintain accessibility standards
 - Test subtask functionality thoroughly
@@ -320,10 +294,8 @@ If you find this project helpful, consider:
 
 <div align="center">
 
-### 🎯 vibecoded
-
 **Coded with ❤️ by [Anoy Roy Chowdhury](https://x.com/Anoyroyc)**
 
-*Focus • Track • Achieve • Collaborate*
+*Focus • Track • Achieve • Share*
 
 </div>
