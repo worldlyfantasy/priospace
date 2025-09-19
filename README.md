@@ -1,4 +1,4 @@
-# 🎯 Priospace
+# 🎯 Prio.Space
 
 A beautiful, modern productivity app that combines task management with Pomodoro timer functionality, habit tracking, and real-time collaboration. Built with Next.js, React, and Framer Motion for smooth animations and premium user experience.
 
