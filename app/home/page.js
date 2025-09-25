@@ -56,7 +56,10 @@ export default function LandingPage() {
   };
 
   const handleDownloadMac = () => {
-    window.open("https://github.com/AnoyRC/priospace", "_blank");
+    window.open(
+      "https://apps.apple.com/us/app/prio-space/id6752712865",
+      "_blank"
+    );
   };
 
   const handleStarGitHub = () => {
@@ -71,7 +74,10 @@ export default function LandingPage() {
   };
 
   const handleDownloadiOS = () => {
-    window.open("https://github.com/AnoyRC/priospace", "_blank");
+    window.open(
+      "https://apps.apple.com/us/app/prio-space/id6752712865?platform=iphone",
+      "_blank"
+    );
   };
 
   return (
