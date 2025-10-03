@@ -1,5 +1,7 @@
 # 🎯 Prio.Space
 
+[Try it out](https://prio.space/home) | [Download from App Store](https://apps.apple.com/us/app/prio-space/id6752712865)
+
 A beautiful, modern productivity app that combines task management with Pomodoro timer functionality, habit tracking, and real-time collaboration. Built with Next.js, React, and Framer Motion for smooth animations and premium user experience.
 
 ![Todo Timer](https://img.shields.io/badge/Version-2.1-blue)
@@ -196,16 +198,6 @@ npm run start
 ```
 
 For production deployment, configure your server settings in `webrtc-server/server.js`.
-
-### Customizing Themes
-The app now supports 4 themes. Update theme configurations in your settings:
-
-```css
-:root {
-  --primary: your-color-hue your-color-saturation your-color-lightness;
-  --theme-variant: your-theme-name;
-}
-```
 
 ## 🌐 WebRTC Server Instructions
 

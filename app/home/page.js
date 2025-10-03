@@ -94,8 +94,18 @@ export default function LandingPage() {
           <div className="mx-auto flex max-w-[58rem] flex-col items-center gap-4 text-center">
             <motion.h1
               variants={fadeInUp}
-              className="font-heading text-3xl font-extrabold"
+              className="font-heading text-3xl font-extrabold flex flex-col items-center gap-4"
             >
+              <a
+                href="https://www.producthunt.com/products/priospace?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-priospace"
+                target="_blank"
+              >
+                <img
+                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1022728&theme=light&t=1759524446626"
+                  alt="PrioSpace - All&#0045;in&#0045;One&#0032;Productivity&#0032;App | Product Hunt"
+                  style={{ width: "250px", height: "54px" }}
+                />
+              </a>
               Prio Space
             </motion.h1>
 
