@@ -97,13 +97,14 @@ export default function LandingPage() {
               className="font-heading text-3xl font-extrabold flex flex-col items-center gap-4"
             >
               <a
-                href="https://www.producthunt.com/products/priospace?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-priospace"
+                href="https://peerlist.io/anoyroyc/project/priospace"
                 target="_blank"
+                rel="noreferrer"
               >
                 <img
-                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1022728&theme=light&t=1759524446626"
-                  alt="PrioSpace - All&#0045;in&#0045;One&#0032;Productivity&#0032;App | Product Hunt"
-                  style={{ width: "250px", height: "54px" }}
+                  src="https://peerlist.io/api/v1/projects/embed/PRJHOK87KBKJLPKKPHPQ7LADJQK697?showUpvote=false&theme=light"
+                  alt="PrioSpace"
+                  style={{ width: "auto", height: "72px" }}
                 />
               </a>
               Prio Space
