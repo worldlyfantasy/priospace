@@ -157,7 +157,7 @@ export function AddTaskModal({
 
   const modalVariants = {
     hidden: {
-      y: "100%",
+      y: "-100%",
       opacity: 0,
       scale: 0.95,
     },
@@ -173,7 +173,7 @@ export function AddTaskModal({
       },
     },
     exit: {
-      y: "100%",
+      y: "-100%",
       opacity: 0,
       scale: 0.95,
       transition: {
@@ -255,12 +255,12 @@ export function AddTaskModal({
       initial="hidden"
       animate="visible"
       exit="exit"
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end justify-center z-50"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-10 pb-4 z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <motion.div
         variants={modalVariants}
-        className="bg-white dark:bg-gray-900 rounded-t-3xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl border-t border-gray-200 dark:border-gray-700"
+        className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag Handle */}
@@ -342,10 +342,10 @@ export function AddTaskModal({
                   <motion.button
                     key={option.label}
                     onClick={() => setTaskDate(option.date)}
-                    className={`px-3 py-2 text-sm font-bold rounded-lg border-2 transition-all duration-200 ${
+                    className={`px-4 py-2 text-sm font-bold rounded-full border-2 transition-all duration-200 ${
                       taskDate.toDateString() === option.date.toDateString()
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-gray-300 hover:border-primary/50 dark:border-gray-600 dark:hover:border-primary/50 dark:text-gray-100"
+                        ? "border-primary bg-primary/15 text-primary shadow-sm shadow-primary/15"
+                        : "border-gray-300 text-gray-600 hover:border-primary/60 hover:bg-primary/10 dark:border-gray-600 dark:text-gray-100 dark:hover:border-primary/70 dark:hover:bg-primary/15"
                     }`}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -382,7 +382,7 @@ export function AddTaskModal({
                     <SelectItem
                       key={tag.id}
                       value={tag.id}
-                      className="rounded-lg dark:hover:bg-gray-700 dark:text-gray-100"
+                      className="rounded-lg hover:bg-primary/10 focus:bg-primary/10 dark:hover:bg-primary/15 dark:text-gray-100"
                     >
                       <div className="flex items-center gap-3">
                         <motion.div
@@ -404,7 +404,7 @@ export function AddTaskModal({
                 <Button
                   variant="outline"
                   onClick={() => setShowAddTag(!showAddTag)}
-                  className="w-full border-2 border-gray-300 font-extrabold hover:border-primary/70 dark:border-gray-600 dark:hover:border-primary/80 dark:text-gray-100 rounded-xl py-3"
+                  className="w-full border-2 border-gray-300 font-extrabold hover:border-primary/70 hover:bg-primary/10 dark:border-gray-600 dark:hover:border-primary/80 dark:hover:bg-primary/15 dark:text-gray-100 rounded-xl py-3 transition-colors"
                 >
                   <motion.div
                     animate={{ rotate: showAddTag ? 45 : 0 }}

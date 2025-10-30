@@ -1,11 +1,19 @@
+import localFont from "next/font/local";
+
 import "./globals.css";
 
-import { Nunito } from "next/font/google";
-
-const nunito = Nunito({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+const nunito = localFont({
+  src: [
+    {
+      path: "../public/fonts/Nunito/XRXV3I6Li01BKofIOOaBTMnFcQIG.woff2",
+      weight: "300 900",
+      style: "normal",
+    },
+  ],
+  fallback: ["Nunito", "Helvetica", "Arial", "sans-serif"],
+  display: "swap",
   variable: "--font-nunito",
+  adjustFontFallback: "Arial",
 });
 
 export const metadata = {

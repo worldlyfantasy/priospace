@@ -2,20 +2,57 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { DayNightCycle, AnimatedNumber } from "@/components/day-night-cycle";
 import { AnimatedYear } from "@/components/animated-year";
 import { WeeklyCalendar } from "@/components/weekly-calender";
 import { TaskList } from "@/components/task-list";
 import { Timer, Plus, BarChart3, Settings, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AddTaskModal } from "@/components/add-task-modal";
-import { TaskOptionsModal } from "@/components/task-options-modal";
-import { AddSubtaskModal } from "@/components/add-subtask-modal";
-import { HabitTracker } from "@/components/habit-tracker";
-import { TimerModal } from "@/components/timer-modal";
-import { SettingsModal } from "@/components/settings-modal";
-import { IntroScreen } from "@/components/intro-screen";
-import { WebRTCShareModal } from "@/components/webrtc-share-modal";
+const AddTaskModal = dynamic(
+  () =>
+    import("@/components/add-task-modal").then((mod) => mod.AddTaskModal),
+  { ssr: false }
+);
+const TaskOptionsModal = dynamic(
+  () =>
+    import("@/components/task-options-modal").then(
+      (mod) => mod.TaskOptionsModal
+    ),
+  { ssr: false }
+);
+const AddSubtaskModal = dynamic(
+  () =>
+    import("@/components/add-subtask-modal").then(
+      (mod) => mod.AddSubtaskModal
+    ),
+  { ssr: false }
+);
+const HabitTracker = dynamic(
+  () =>
+    import("@/components/habit-tracker").then((mod) => mod.HabitTracker),
+  { ssr: false }
+);
+const TimerModal = dynamic(
+  () => import("@/components/timer-modal").then((mod) => mod.TimerModal),
+  { ssr: false }
+);
+const SettingsModal = dynamic(
+  () =>
+    import("@/components/settings-modal").then((mod) => mod.SettingsModal),
+  { ssr: false }
+);
+const IntroScreen = dynamic(
+  () => import("@/components/intro-screen").then((mod) => mod.IntroScreen),
+  { ssr: false }
+);
+const WebRTCShareModal = dynamic(
+  () =>
+    import("@/components/webrtc-share-modal").then(
+      (mod) => mod.WebRTCShareModal
+    ),
+  { ssr: false }
+);
 
 export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
@@ -147,30 +184,6 @@ export default function Home() {
         return;
       }
 
-      const isModifierPressed = event.ctrlKey || event.metaKey; // Ctrl for Windows/Linux, Cmd for Mac
-
-      if (isModifierPressed) {
-        switch (event.key.toLowerCase()) {
-          case "a": // Ctrl/Cmd + A for Add Task
-            event.preventDefault();
-            setShowAddTask(true);
-            break;
-          case "h": // Ctrl/Cmd + H for Habits
-            event.preventDefault();
-            setShowHabits(true);
-            break;
-          case "c": // Ctrl/Cmd + C for Timer
-            event.preventDefault();
-            setShowTimer(true);
-            break;
-          case "x": // Ctrl/Cmd + X for Settings
-            event.preventDefault();
-            setShowSettings(true);
-            break;
-          default:
-            break;
-        }
-      }
     };
 
     document.addEventListener("keydown", handleKeyDown);
@@ -1031,7 +1044,7 @@ export default function Home() {
                     onClick={() => setShowTimer(true)}
                     variant="ghost"
                     size="lg"
-                    className="flex-1 flex items-center justify-center px-4 sm:px-8 gap-2 font-extrabold hover:bg-accent/50 group dark:text-white"
+                    className="flex-1 flex items-center justify-center px-4 sm:px-8 gap-2 font-extrabold hover:bg-primary/15 dark:hover:bg-primary/25 group dark:text-white"
                   >
                     <div className="group-hover:scale-110 transition-transform  flex items-center gap-2">
                       <Timer className="h-5 w-5" />
@@ -1051,7 +1064,7 @@ export default function Home() {
                     onClick={() => setShowHabits(true)}
                     variant="ghost"
                     size="lg"
-                    className="flex-1 flex items-center justify-center px-4 sm:px-8 gap-2 font-extrabold group hover:bg-accent/50 dark:text-white"
+                    className="flex-1 flex items-center justify-center px-4 sm:px-8 gap-2 font-extrabold group hover:bg-primary/15 dark:hover:bg-primary/25 dark:text-white"
                   >
                     <div className="group-hover:scale-110 transition-transform  flex items-center gap-2">
                       <BarChart3 className="h-5 w-5" />
@@ -1075,15 +1088,15 @@ export default function Home() {
               >
                 {/* Settings Button */}
                 <div className="p-6 border-b border-dashed flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-2xl font-extrabold">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                  <div className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/40 bg-primary/10 shadow-sm shadow-primary/10">
                       <CheckCircle className="h-4 w-4 text-primary" />
                     </div>
-                    Prio Space
+                    Fanta Space
                   </div>
                   <button
                     onClick={() => setShowSettings(true)}
-                    className="bg-primary text-background rounded-lg py-3 px-4 hover:bg-primary/90 transition-colors"
+                    className="bg-primary text-background rounded-xl py-3 px-4 hover:bg-primary/90 transition-colors"
                   >
                     <Settings className="h-4 w-4" />
                   </button>
@@ -1142,7 +1155,7 @@ export default function Home() {
                     onClick={() => setShowTimer(true)}
                     variant="outline"
                     size="lg"
-                    className="w-full h-12 font-bold hover:bg-accent/50 group hover:scale-[1.02] transition-all duration-200 rounded-2xl"
+                    className="w-full h-12 font-bold hover:bg-primary/15 dark:hover:bg-primary/25 group hover:scale-[1.02] transition-all duration-200 rounded-2xl"
                   >
                     <Timer className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" />
                     <span className="font-extrabold">Timer</span>
@@ -1152,21 +1165,13 @@ export default function Home() {
                     onClick={() => setShowHabits(true)}
                     variant="outline"
                     size="lg"
-                    className="w-full h-12 font-bold hover:bg-accent/50 group hover:scale-[1.02] transition-all duration-200 rounded-2xl"
+                    className="w-full h-12 font-bold hover:bg-primary/15 dark:hover:bg-primary/25 group hover:scale-[1.02] transition-all duration-200 rounded-2xl"
                   >
                     <BarChart3 className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" />
                     <span className="font-extrabold">Habits</span>
                   </Button>
                 </div>
 
-                {/* Keyboard shortcuts hint */}
-                <div className="p-6 pt-0 text-[10px] text-muted-foreground font-extrabold space-y-1 opacity-70">
-                  <div>⌘/Ctrl + A → Add Task</div>
-                  <div>⌘/Ctrl + C → Timer</div>
-                  <div>⌘/Ctrl + H → Habits</div>
-                  <div>⌘/Ctrl + X → Settings</div>
-                  <div>Esc → Close Modal</div>
-                </div>
               </motion.div>
             </div>
 

@@ -675,7 +675,7 @@ export function WebRTCShareModal({
                   <Wifi className="h-5 w-5 text-green-500 animate-pulse" />
                 )}
                 {status === "connecting" && (
-                  <RefreshCw className="h-5 w-5 text-blue-500 animate-spin" />
+                  <RefreshCw className="h-5 w-5 text-primary animate-spin" />
                 )}
                 {status === "connected" && (
                   <Check className="h-5 w-5 text-green-500" />
@@ -888,12 +888,12 @@ export function WebRTCShareModal({
             <motion.div variants={contentVariants} className="space-y-4">
               <motion.div
                 variants={itemVariants}
-                className="text-center p-6 rounded-xl bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700"
+                className="text-center p-6 rounded-xl bg-primary/10 dark:bg-primary/15 border-2 border-primary/30 dark:border-primary/40"
               >
-                <div className="text-3xl font-extrabold text-blue-700 dark:text-blue-300 mb-2 tracking-wider">
+                <div className="text-3xl font-extrabold text-primary mb-2 tracking-wider">
                   {roomId}
                 </div>
-                <div className="text-sm text-blue-600 dark:text-blue-400 font-extrabold uppercase tracking-wider">
+                <div className="text-sm text-primary/80 dark:text-primary font-extrabold uppercase tracking-wider">
                   Share this Room ID with others
                 </div>
               </motion.div>

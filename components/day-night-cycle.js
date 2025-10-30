@@ -1,40 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AnimatePresence, motion, useSpring } from "framer-motion";
+import { motion, useSpring } from "framer-motion";
 import { Sun, Moon } from "lucide-react";
 
 function AnimatedWeekday({ dayIndex, fontSize, textColor }) {
-  const weekdays = [
-    {
-      day: "Sun",
-      width: fontSize * 1.8,
-    },
-    {
-      day: "Mon",
-      width: fontSize * 2,
-    },
-    {
-      day: "Tue",
-      width: fontSize * 1.65,
-    },
-    {
-      day: "Wed",
-      width: fontSize * 2.2,
-    },
-    {
-      day: "Thu",
-      width: fontSize * 1.8,
-    },
-    {
-      day: "Fri",
-      width: fontSize * 1.2,
-    },
-    {
-      day: "Sat",
-      width: fontSize * 1.6,
-    },
-  ];
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const height = fontSize * 1.2;
 
   const animatedIndex = useSpring(dayIndex, { stiffness: 300, damping: 30 });
@@ -48,7 +19,7 @@ function AnimatedWeekday({ dayIndex, fontSize, textColor }) {
       className="relative overflow-hidden inline-block"
       style={{
         height: height,
-        width: weekdays[dayIndex].width,
+        width: fontSize * 2.2,
         fontSize: fontSize,
         color: textColor,
         fontWeight: "800",
@@ -56,7 +27,7 @@ function AnimatedWeekday({ dayIndex, fontSize, textColor }) {
     >
       {weekdays.map((day, index) => (
         <motion.div
-          key={day.day}
+          key={day}
           className="absolute flex items-center justify-start font-extrabold"
           style={{
             y: useSpring((index - dayIndex) * height, {
@@ -69,7 +40,7 @@ function AnimatedWeekday({ dayIndex, fontSize, textColor }) {
           }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
         >
-          {day.day}
+          {day}
         </motion.div>
       ))}
     </div>
@@ -151,19 +122,13 @@ export function DayNightCycle({ selectedDate }) {
           <AnimatedWeekday dayIndex={dayIndex} fontSize={32} />
         </div>
         {isToday(selectedDate) && (
-          <AnimatePresence>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              {isDay ? (
-                <Sun className="h-7 w-7 text-yellow-500" />
-              ) : (
-                <Moon className="h-7 w-7 text-blue-500" />
-              )}
-            </motion.div>
-          </AnimatePresence>
+          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/40 bg-primary/10 shadow-sm shadow-primary/10">
+            {isDay ? (
+              <Sun className="h-5 w-5 text-primary" />
+            ) : (
+              <Moon className="h-5 w-5 text-primary" />
+            )}
+          </div>
         )}
       </div>
     </div>

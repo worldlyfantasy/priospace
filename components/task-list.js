@@ -503,8 +503,8 @@ function TaskItem({
                   )}
                   {displayFocusTime > 0 && (
                     <div className="flex items-center gap-1 font-extrabold opacity-80">
-                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                      <span className="text-blue-600 dark:text-blue-400">
+                      <div className="w-2 h-2 rounded-full bg-primary"></div>
+                      <span className="text-primary dark:text-primary">
                         {formatFocusTime(displayFocusTime)}
                       </span>
                     </div>

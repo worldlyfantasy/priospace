@@ -14,8 +14,8 @@ const config = {
         sm: "460px",
       },
       fontFamily: {
-        nunito: "var(--font-nunito)",
-        sans: "var(--font-nunito)",
+        nunito: ["var(--font-nunito)", "Nunito", "sans-serif"],
+        sans: ["var(--font-nunito)", "Nunito", "sans-serif"],
       },
       colors: {
         background: "hsl(var(--background))",
