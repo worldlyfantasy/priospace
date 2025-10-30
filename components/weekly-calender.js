@@ -1,103 +1,158 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function WeeklyCalendar({ selectedDate, onDateSelect }) {
-  const [currentWeek, setCurrentWeek] = useState(0);
-  const scrollRef = useRef(null);
+  const [currentMonth, setCurrentMonth] = useState(
+    () => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+  );
 
-  const getWeekDates = (weekOffset = 0) => {
-    const today = new Date();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay() + weekOffset * 7);
+  useEffect(() => {
+    setCurrentMonth(
+      new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+    );
+  }, [selectedDate]);
 
-    const dates = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(startOfWeek);
-      date.setDate(startOfWeek.getDate() + i);
-      dates.push(date);
+  const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  const monthMatrix = useMemo(() => {
+    const startOfMonth = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth(),
+      1
+    );
+    const endOfMonth = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth() + 1,
+      0
+    );
+
+    const totalDays = endOfMonth.getDate();
+    const startOffset = (startOfMonth.getDay() + 6) % 7; // Convert Sunday (0) to index 6 for Monday start
+
+    const days = [];
+
+    for (let i = 0; i < startOffset; i++) {
+      days.push(null);
     }
-    return dates;
+
+    for (let day = 1; day <= totalDays; day++) {
+      days.push(
+        new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
+      );
+    }
+
+    while (days.length % 7 !== 0) {
+      days.push(null);
+    }
+
+    const weeks = [];
+    for (let i = 0; i < days.length; i += 7) {
+      weeks.push(days.slice(i, i + 7));
+    }
+
+    return weeks;
+  }, [currentMonth]);
+
+  const handlePreviousMonth = () => {
+    setCurrentMonth((prev) =>
+      new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
+    );
   };
 
-  const weekDates = getWeekDates(currentWeek);
+  const handleNextMonth = () => {
+    setCurrentMonth((prev) =>
+      new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
+    );
+  };
+
+  const monthLabel = currentMonth.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
 
   const isToday = (date) => {
     const today = new Date();
-    return date.toDateString() === today.toDateString();
+    return date?.toDateString() === today.toDateString();
   };
 
   const isSelected = (date) => {
-    return date.toDateString() === selectedDate.toDateString();
+    return date?.toDateString() === selectedDate.toDateString();
   };
 
   return (
-    <div className="flex flex-col gap-3 sm:h-[90px]">
-      <div className="flex items-center sm:justify-between justify-center h-full">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
         <Button
           variant="ghost"
           size="sm"
-          className="w-5 h-full hidden sm:flex"
-          onClick={() => setCurrentWeek(currentWeek - 1)}
+          className="w-8 h-8 flex items-center justify-center"
+          onClick={handlePreviousMonth}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <div className="flex gap-2 h-[76px]" ref={scrollRef}>
-          {weekDates.map((date, index) => (
-            <motion.button
-              key={date.toISOString()}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => onDateSelect(date)}
-              className={`flex-shrink-0 flex flex-col font-bold items-center p-2 rounded-lg min-w-[30px] sm:min-w-[50px] transition-colors ${
-                isSelected(date)
-                  ? "border border-primary/50"
-                  : isToday(date)
-                  ? "bg-primary/20"
-                  : "hover:bg-primary/5 dark:hover:bg-primary/5 text-gray-600 dark:text-gray-300"
-              }`}
-            >
-              <span className="text-xs font-semibold">
-                {date.toLocaleDateString("en-US", { weekday: "short" })}
-              </span>
-              <span className="text-lg font-extrabold">{date.getDate()}</span>
-              <span className="text-xs font-semibold">
-                {date.toLocaleDateString("en-US", { month: "short" })}
-              </span>
-            </motion.button>
-          ))}
+        <div className="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+          {monthLabel}
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className="w-5 h-[80px] hidden sm:flex"
-          onClick={() => setCurrentWeek(currentWeek + 1)}
+          className="w-8 h-8 flex items-center justify-center"
+          onClick={handleNextMonth}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
 
-      <div className=" items-center justify-center gap-10 h-full sm:hidden flex">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-5 h-full p-2"
-          onClick={() => setCurrentWeek(currentWeek - 1)}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
+      <div className="grid grid-cols-7 gap-2 text-[10px] sm:text-xs font-semibold text-center text-gray-500 dark:text-gray-400">
+        {daysOfWeek.map((day) => (
+          <div key={day} className="uppercase">
+            {day}
+          </div>
+        ))}
+      </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-5 h-full p-2"
-          onClick={() => setCurrentWeek(currentWeek + 1)}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+      <div className="flex flex-col gap-2">
+        {monthMatrix.map((week, weekIndex) => (
+          <div key={weekIndex} className="grid grid-cols-7 gap-2">
+            {week.map((date, dayIndex) => {
+              if (!date) {
+                return <div key={`${weekIndex}-${dayIndex}`} className="h-12 sm:h-14" />;
+              }
+
+              const selected = isSelected(date);
+              const today = isToday(date);
+
+              const baseClasses =
+                "h-12 sm:h-14 flex flex-col items-center justify-center rounded-lg font-bold transition-colors border border-transparent text-gray-600 dark:text-gray-300";
+
+              const stateClasses = selected
+                ? "border-primary/60 bg-primary/10 text-gray-900 dark:text-gray-100"
+                : "hover:bg-primary/5 dark:hover:bg-primary/5";
+
+              const todayClasses = today
+                ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                : "";
+
+              return (
+                <motion.button
+                  key={date.toISOString()}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => onDateSelect(date)}
+                  className={`${baseClasses} ${stateClasses} ${todayClasses}`}
+                >
+                  <span className="text-sm sm:text-base font-extrabold">
+                    {date.getDate()}
+                  </span>
+                </motion.button>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );

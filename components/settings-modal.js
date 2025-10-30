@@ -167,7 +167,7 @@ export function SettingsModal({
   };
 
   const handleTwitterClick = () => {
-    window.open("https://x.com/Anoyroyc", "_blank");
+    window.open("https://www.instagram.com/li.haisen007/", "_blank");
   };
 
   const ThemePreview = ({ themeData, isSelected, onClick }) => (
