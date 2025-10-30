@@ -147,30 +147,6 @@ export default function Home() {
         return;
       }
 
-      const isModifierPressed = event.ctrlKey || event.metaKey; // Ctrl for Windows/Linux, Cmd for Mac
-
-      if (isModifierPressed) {
-        switch (event.key.toLowerCase()) {
-          case "a": // Ctrl/Cmd + A for Add Task
-            event.preventDefault();
-            setShowAddTask(true);
-            break;
-          case "h": // Ctrl/Cmd + H for Habits
-            event.preventDefault();
-            setShowHabits(true);
-            break;
-          case "c": // Ctrl/Cmd + C for Timer
-            event.preventDefault();
-            setShowTimer(true);
-            break;
-          case "x": // Ctrl/Cmd + X for Settings
-            event.preventDefault();
-            setShowSettings(true);
-            break;
-          default:
-            break;
-        }
-      }
     };
 
     document.addEventListener("keydown", handleKeyDown);
@@ -1159,14 +1135,6 @@ export default function Home() {
                   </Button>
                 </div>
 
-                {/* Keyboard shortcuts hint */}
-                <div className="p-6 pt-0 text-[10px] text-muted-foreground font-extrabold space-y-1 opacity-70">
-                  <div>⌘/Ctrl + A → Add Task</div>
-                  <div>⌘/Ctrl + C → Timer</div>
-                  <div>⌘/Ctrl + H → Habits</div>
-                  <div>⌘/Ctrl + X → Settings</div>
-                  <div>Esc → Close Modal</div>
-                </div>
               </motion.div>
             </div>
 

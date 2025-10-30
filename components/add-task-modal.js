@@ -157,7 +157,7 @@ export function AddTaskModal({
 
   const modalVariants = {
     hidden: {
-      y: "100%",
+      y: "-100%",
       opacity: 0,
       scale: 0.95,
     },
@@ -173,7 +173,7 @@ export function AddTaskModal({
       },
     },
     exit: {
-      y: "100%",
+      y: "-100%",
       opacity: 0,
       scale: 0.95,
       transition: {
@@ -255,12 +255,12 @@ export function AddTaskModal({
       initial="hidden"
       animate="visible"
       exit="exit"
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end justify-center z-50"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-10 pb-4 z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <motion.div
         variants={modalVariants}
-        className="bg-white dark:bg-gray-900 rounded-t-3xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl border-t border-gray-200 dark:border-gray-700"
+        className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag Handle */}
