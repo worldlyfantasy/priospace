@@ -8,12 +8,8 @@ import {
   Sun,
   Moon,
   Settings,
-  Heart,
-  ExternalLink,
   Palette,
   Check,
-  Share,
-  Wifi,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -25,7 +21,6 @@ export function SettingsModal({
   onImportData,
   theme,
   onThemeChange,
-  onOpenWebRTCShare, // New prop for opening WebRTC share
 }) {
   const themes = [
     {
@@ -125,7 +120,7 @@ export function SettingsModal({
 
   const modalVariants = {
     hidden: {
-      y: "100%",
+      y: "-100%",
       opacity: 0,
       scale: 0.95,
     },
@@ -141,7 +136,7 @@ export function SettingsModal({
       },
     },
     exit: {
-      y: "100%",
+      y: "-100%",
       opacity: 0,
       scale: 0.95,
       transition: {
@@ -171,17 +166,8 @@ export function SettingsModal({
     },
   };
 
-  const handleBuyMeCoffee = () => {
-    window.open("https://coff.ee/anoy", "_blank");
-  };
-
   const handleTwitterClick = () => {
     window.open("https://x.com/Anoyroyc", "_blank");
-  };
-
-  const handleWebRTCShare = () => {
-    onClose(); // Close settings first
-    onOpenWebRTCShare(); // Open WebRTC share modal
   };
 
   const ThemePreview = ({ themeData, isSelected, onClick }) => (
@@ -242,12 +228,12 @@ export function SettingsModal({
       initial="hidden"
       animate="visible"
       exit="exit"
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end justify-center z-50"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-10 pb-4 z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <motion.div
         variants={modalVariants}
-        className="bg-white dark:bg-gray-900 rounded-t-3xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl border-t border-gray-200 dark:border-gray-700"
+        className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag Handle */}
@@ -409,34 +395,6 @@ export function SettingsModal({
               </div>
             </motion.div>
 
-            {/* WebRTC Share */}
-            <motion.div variants={itemVariants}>
-              <div className="flex items-center justify-between p-4 rounded-xl border-2 border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-800/20">
-                <div className="flex items-center gap-3">
-                  <Wifi className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  <div>
-                    <div className="font-extrabold text-blue-700 dark:text-blue-300">
-                      Sync Tasks (P2P)
-                    </div>
-                    <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">
-                      Sync your tasks from/with another device
-                    </div>
-                  </div>
-                </div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Button
-                    onClick={handleWebRTCShare}
-                    className="bg-blue-600 hover:bg-blue-700 text-white border-0 rounded-xl font-extrabold w-12 h-12 p-0"
-                  >
-                    <Share className="h-4 w-4" />
-                  </Button>
-                </motion.div>
-              </div>
-            </motion.div>
-
             {/* Export Data */}
             <motion.div variants={itemVariants}>
               <div className="flex items-center justify-between p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80">
@@ -497,23 +455,6 @@ export function SettingsModal({
               </div>
             </motion.div>
 
-            {/* Buy Me a Coffee */}
-            <motion.div variants={itemVariants}>
-              <motion.div
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-              >
-                <Button
-                  onClick={handleBuyMeCoffee}
-                  className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white font-extrabold py-4 rounded-xl shadow-lg border-0"
-                >
-                  <Heart className="h-5 w-5 mr-2 fill-current" />
-                  Buy Me a Coffee
-                  <ExternalLink className="h-4 w-4 ml-2" />
-                </Button>
-              </motion.div>
-            </motion.div>
-
             {/* App Info */}
             <motion.div
               variants={itemVariants}
@@ -553,7 +494,7 @@ export function SettingsModal({
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      Anoy Roy Chowdhury
+                      worldlyfantasy
                     </motion.button>
                   </div>
                 </div>
