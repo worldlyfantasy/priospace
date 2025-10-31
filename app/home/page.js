@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import {
-  CheckCircle,
   Timer,
   RotateCcw,
   Download,
@@ -17,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { FantaSpaceLogo } from "@/components/fanta-space-logo";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -89,11 +89,8 @@ export default function LandingPage() {
         transition={{ duration: 0.6 }}
       >
         <div className="container flex h-14 items-center">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-              <CheckCircle className="h-4 w-4 text-primary" />
-            </div>
-            <span className="text-lg font-extrabold">Prio Space</span>
+          <div className="flex h-16 items-center gap-3">
+            <FantaSpaceLogo className="flex-shrink-0" width={200} />
           </div>
 
           <div className="ml-auto">

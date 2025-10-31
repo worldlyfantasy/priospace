@@ -7,8 +7,9 @@ import { DayNightCycle, AnimatedNumber } from "@/components/day-night-cycle";
 import { AnimatedYear } from "@/components/animated-year";
 import { WeeklyCalendar } from "@/components/weekly-calender";
 import { TaskList } from "@/components/task-list";
-import { Timer, Plus, BarChart3, Settings, CheckCircle } from "lucide-react";
+import { Timer, Plus, BarChart3, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FantaSpaceLogo } from "@/components/fanta-space-logo";
 const AddTaskModal = dynamic(
   () =>
     import("@/components/add-task-modal").then((mod) => mod.AddTaskModal),
@@ -1087,12 +1088,9 @@ export default function Home() {
                 className="flex flex-col h-full"
               >
                 {/* Settings Button */}
-                <div className="p-6 border-b border-dashed flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/40 bg-primary/10 shadow-sm shadow-primary/10">
-                      <CheckCircle className="h-4 w-4 text-primary" />
-                    </div>
-                    Fanta Space
+                <div className="px-6 py-4 border-b border-dashed flex items-center justify-between">
+                  <div className="flex h-16 items-center">
+                    <FantaSpaceLogo className="flex-shrink-0" width={200} />
                   </div>
                   <button
                     onClick={() => setShowSettings(true)}

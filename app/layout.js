@@ -17,7 +17,7 @@ const nunito = localFont({
 });
 
 export const metadata = {
-  title: "PrioSpace",
+  title: "FantaSpace",
   description: "Focus on what matters.",
 };
 
