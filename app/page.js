@@ -1025,6 +1025,7 @@ export default function Home() {
                 <WeeklyCalendar
                   selectedDate={selectedDate}
                   onDateSelect={setSelectedDate}
+                  dailyTasks={dailyTasks}
                 />
               </div>
 
@@ -1135,6 +1136,7 @@ export default function Home() {
                   <WeeklyCalendar
                     selectedDate={selectedDate}
                     onDateSelect={setSelectedDate}
+                    dailyTasks={dailyTasks}
                   />
                 </div>
 

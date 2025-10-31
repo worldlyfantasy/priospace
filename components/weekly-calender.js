@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-export function WeeklyCalendar({ selectedDate, onDateSelect }) {
+export function WeeklyCalendar({
+  selectedDate,
+  onDateSelect,
+  dailyTasks = {},
+}) {
   const [currentMonth, setCurrentMonth] = useState(
     () =>
       new Date(
@@ -87,6 +91,20 @@ export function WeeklyCalendar({ selectedDate, onDateSelect }) {
     return date.toDateString() === today.toDateString();
   };
 
+  const getDateKey = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const taskCounts = useMemo(() => {
+    return Object.entries(dailyTasks || {}).reduce((acc, [dateKey, tasks]) => {
+      acc[dateKey] = Array.isArray(tasks) ? tasks.length : 0;
+      return acc;
+    }, {});
+  }, [dailyTasks]);
+
   const isSelected = (date) => {
     if (!date) return false;
     return date.toDateString() === selectedDate.toDateString();
@@ -157,7 +175,7 @@ export function WeeklyCalendar({ selectedDate, onDateSelect }) {
               ))}
             </div>
 
-            <div className="mt-3 relative overflow-hidden rounded-3xl min-h-[22rem]">
+            <div className="mt-3 relative overflow-hidden rounded-3xl min-h-[24rem]">
               <AnimatePresence
                 initial={false}
                 mode="wait"
@@ -170,7 +188,7 @@ export function WeeklyCalendar({ selectedDate, onDateSelect }) {
                   initial="enter"
                   animate="center"
                   exit="exit"
-                  className="absolute inset-0 grid grid-cols-7 gap-2 p-4 justify-items-center"
+                  className="absolute inset-0 grid grid-cols-7 gap-x-2 gap-y-1.5 p-4 justify-items-center"
                 >
                   {calendarDays.map((week, weekIndex) =>
                     week.map((date, dayIndex) => {
@@ -185,9 +203,15 @@ export function WeeklyCalendar({ selectedDate, onDateSelect }) {
 
                       const selected = isSelected(date);
                       const today = isToday(date);
+                      const dateKey = getDateKey(date);
+                      const taskCount = taskCounts[dateKey] || 0;
+                      const taskCountClass = selected
+                        ? "text-primary/80"
+                        : "text-muted-foreground";
+                      const hasTasks = taskCount > 0;
 
                       let classes =
-                        "flex h-14 w-14 items-center justify-center rounded-full transition-all duration-200 font-extrabold text-gray-600 dark:text-gray-300 hover:bg-primary/10 hover:text-primary";
+                        "flex h-14 w-14 flex-col items-center justify-center gap-1 rounded-2xl transition-all duration-200 font-extrabold text-gray-600 dark:text-gray-300 hover:bg-primary/10 hover:text-primary";
 
                       if (selected) {
                         classes +=
@@ -204,7 +228,17 @@ export function WeeklyCalendar({ selectedDate, onDateSelect }) {
                           onClick={() => onDateSelect(new Date(date))}
                           className={classes}
                         >
-                          <span className="text-sm">{date.getDate()}</span>
+                          <span className="text-sm leading-none">
+                            {date.getDate()}
+                          </span>
+                          <span
+                            className={`text-[0.65rem] font-normal ${taskCountClass} ${
+                              hasTasks ? "" : "opacity-0"
+                            }`}
+                            aria-hidden={!hasTasks}
+                          >
+                            {hasTasks ? taskCount : "0"}
+                          </span>
                         </motion.button>
                       );
                     })
