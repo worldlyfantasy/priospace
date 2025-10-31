@@ -405,11 +405,11 @@ export function HabitTracker({
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                     >
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowAddTag(!showAddTag)}
-                        className="w-full border-2 border-gray-300 font-extrabold hover:border-primary/70 dark:border-gray-600 dark:hover:border-primary/80 dark:text-gray-100 rounded-xl py-3"
-                      >
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAddTag(!showAddTag)}
+                      className="w-full border-2 border-gray-300 font-extrabold text-gray-700 hover:text-primary hover:border-primary hover:bg-primary/10 dark:border-gray-600 dark:text-gray-100 dark:hover:text-primary dark:hover:border-primary/80 dark:hover:bg-primary/15 rounded-xl py-3 transition-colors"
+                    >
                         <motion.div
                           animate={{ rotate: showAddTag ? 45 : 0 }}
                           transition={{ duration: 0.2 }}
@@ -521,20 +521,20 @@ export function HabitTracker({
                     >
                       <Button
                         variant="outline"
-                        onClick={() => {
-                          setShowAddForm(false);
-                          setNewHabitName("");
-                          setSelectedTag("");
-                          setShowAddTag(false);
-                          setNewTagName("");
-                          setShowNavigation(true);
-                        }}
-                        className="px-6 py-4 rounded-xl font-extrabold border-2 border-gray-300 hover:border-primary/70 dark:border-gray-600 dark:hover:border-primary/80 dark:text-gray-100"
-                      >
-                        Cancel
-                      </Button>
-                    </motion.div>
-                  </div>
+                      onClick={() => {
+                        setShowAddForm(false);
+                        setNewHabitName("");
+                        setSelectedTag("");
+                        setShowAddTag(false);
+                        setNewTagName("");
+                        setShowNavigation(true);
+                      }}
+                      className="px-6 py-4 rounded-xl font-extrabold border-2 border-gray-300 text-gray-700 hover:text-primary hover:border-primary hover:bg-primary/10 dark:border-gray-600 dark:text-gray-100 dark:hover:text-primary dark:hover:border-primary/80 dark:hover:bg-primary/15 transition-colors"
+                    >
+                      Cancel
+                    </Button>
+                  </motion.div>
+                </div>
                 </motion.div>
               ) : (
                 <motion.div
@@ -542,18 +542,18 @@ export function HabitTracker({
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                 >
-                  <Button
-                    onClick={() => {
-                      setShowAddForm(true);
-                      setShowNavigation(false);
-                    }}
-                    variant="outline"
-                    className="w-full border-2 border-gray-300 font-extrabold hover:border-primary/70 dark:border-gray-600 dark:hover:border-primary/80 dark:text-gray-100 rounded-xl py-4"
-                  >
-                    <Plus className="h-5 w-5 mr-2" />
-                    Add New Habit
-                  </Button>
-                </motion.div>
+                <Button
+                  onClick={() => {
+                    setShowAddForm(true);
+                    setShowNavigation(false);
+                  }}
+                  variant="outline"
+                  className="w-full border-2 border-gray-300 font-extrabold text-gray-700 hover:text-primary hover:border-primary hover:bg-primary/10 dark:border-gray-600 dark:text-gray-100 dark:hover:text-primary dark:hover:border-primary/80 dark:hover:bg-primary/15 rounded-xl py-4 transition-colors"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Add New Habit
+                </Button>
+              </motion.div>
               )}
             </AnimatePresence>
 

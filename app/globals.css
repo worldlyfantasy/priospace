@@ -215,12 +215,19 @@
     font-weight: 500;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-user-select: none;
+    user-select: none;
   }
   button,
   input,
   select,
   textarea {
     font-family: inherit;
+  }
+  input,
+  textarea {
+    -webkit-user-select: text;
+    user-select: text;
   }
   h1,
   h2,

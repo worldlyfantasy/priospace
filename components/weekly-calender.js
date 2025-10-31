@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -16,20 +16,29 @@ export function WeeklyCalendar({ selectedDate, onDateSelect }) {
         1
       )
   );
+  const [transitionDirection, setTransitionDirection] = useState(0);
 
   useEffect(() => {
-    setCurrentMonth((prev) => {
-      const desired = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        1
-      );
+    const desired = new Date(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      1
+    );
 
+    setCurrentMonth((prev) => {
       const sameMonth =
         prev.getFullYear() === desired.getFullYear() &&
         prev.getMonth() === desired.getMonth();
 
-      return sameMonth ? prev : desired;
+      if (sameMonth) {
+        return prev;
+      }
+
+      const direction =
+        desired.getTime() > prev.getTime() ? 1 : -1;
+      setTransitionDirection(direction);
+
+      return desired;
     });
   }, [selectedDate]);
 
@@ -84,12 +93,14 @@ export function WeeklyCalendar({ selectedDate, onDateSelect }) {
   };
 
   const goToPreviousMonth = () => {
+    setTransitionDirection(-1);
     setCurrentMonth(
       new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
     );
   };
 
   const goToNextMonth = () => {
+    setTransitionDirection(1);
     setCurrentMonth(
       new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
     );
@@ -99,6 +110,24 @@ export function WeeklyCalendar({ selectedDate, onDateSelect }) {
     month: "long",
     year: "numeric",
   });
+  const monthKey = `${currentMonth.getFullYear()}-${currentMonth.getMonth()}`;
+
+  const monthVariants = {
+    enter: (direction) => ({
+      x: direction * 48,
+      opacity: 0,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      transition: { duration: 0.28, ease: "easeOut" },
+    },
+    exit: (direction) => ({
+      x: direction * -48,
+      opacity: 0,
+      transition: { duration: 0.2, ease: "easeIn" },
+    }),
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -119,8 +148,8 @@ export function WeeklyCalendar({ selectedDate, onDateSelect }) {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col justify-center">
-            <div className="grid grid-cols-7 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide gap-1">
+          <div className="flex-1 flex flex-col justify-start">
+            <div className="grid grid-cols-7 gap-1 px-4 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
               {weekDays.map((day) => (
                 <div key={day} className="py-1">
                   {day}
@@ -128,47 +157,60 @@ export function WeeklyCalendar({ selectedDate, onDateSelect }) {
               ))}
             </div>
 
-            <div className="mt-1 grid grid-cols-7 gap-1">
-              {calendarDays.map((week, weekIndex) =>
-                week.map((date, dayIndex) => {
-                  if (!date) {
-                    return (
-                      <div
-                        key={`empty-${weekIndex}-${dayIndex}`}
-                        className="h-14 w-14 rounded-full"
-                      />
-                    );
-                  }
+            <div className="mt-3 relative overflow-hidden rounded-3xl min-h-[22rem]">
+              <AnimatePresence
+                initial={false}
+                mode="wait"
+                custom={transitionDirection}
+              >
+                <motion.div
+                  key={monthKey}
+                  custom={transitionDirection}
+                  variants={monthVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  className="absolute inset-0 grid grid-cols-7 gap-2 p-4 justify-items-center"
+                >
+                  {calendarDays.map((week, weekIndex) =>
+                    week.map((date, dayIndex) => {
+                      if (!date) {
+                        return (
+                          <div
+                            key={`empty-${weekIndex}-${dayIndex}`}
+                            className="h-14 w-14"
+                          />
+                        );
+                      }
 
-                  const selected = isSelected(date);
-                  const today = isToday(date);
+                      const selected = isSelected(date);
+                      const today = isToday(date);
 
-                  let classes =
-                    "flex items-center justify-center rounded-full h-14 w-14 transition-all duration-200 font-extrabold text-gray-600 dark:text-gray-300 hover:bg-primary/10 hover:text-primary";
+                      let classes =
+                        "flex h-14 w-14 items-center justify-center rounded-full transition-all duration-200 font-extrabold text-gray-600 dark:text-gray-300 hover:bg-primary/10 hover:text-primary";
 
-                  if (selected) {
-                    classes +=
-                      " border-2 border-primary/80 bg-primary/15 text-primary dark:text-primary shadow-sm shadow-primary/20";
-                  }
+                      if (selected) {
+                        classes +=
+                          " border-2 border-primary/80 bg-primary/15 text-primary shadow-sm shadow-primary/20";
+                      } else if (today) {
+                        classes += " border-2 border-primary/60 text-primary";
+                      }
 
-                  if (today) {
-                    classes +=
-                      " ring-2 ring-primary ring-offset-2 ring-offset-background";
-                  }
-
-                  return (
-                    <motion.button
-                      key={date.toISOString()}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.96 }}
-                      onClick={() => onDateSelect(new Date(date))}
-                      className={classes}
-                    >
-                      <span className="text-sm">{date.getDate()}</span>
-                    </motion.button>
-                  );
-                })
-              )}
+                      return (
+                        <motion.button
+                          key={date.toISOString()}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.96 }}
+                          onClick={() => onDateSelect(new Date(date))}
+                          className={classes}
+                        >
+                          <span className="text-sm">{date.getDate()}</span>
+                        </motion.button>
+                      );
+                    })
+                  )}
+                </motion.div>
+              </AnimatePresence>
             </div>
           </div>
         </div>

@@ -383,7 +383,7 @@ export function SettingsModal({
                     onClick={onToggleDarkMode}
                     variant="outline"
                     size="sm"
-                    className="border-2 border-gray-300 dark:border-gray-600 hover:border-primary/70 dark:hover:border-primary/80 rounded-xl font-extrabold w-12 h-12 p-0"
+                    className="border-2 border-gray-300 dark:border-gray-600 text-primary hover:text-primary hover:bg-primary/10 dark:hover:bg-primary/20 hover:border-primary/70 dark:hover:border-primary/80 rounded-xl font-extrabold w-12 h-12 p-0"
                   >
                     {darkMode ? (
                       <Sun className="h-4 w-4" />
@@ -417,7 +417,7 @@ export function SettingsModal({
                     onClick={onExportData}
                     variant="outline"
                     size="sm"
-                    className="border-2 border-gray-300 dark:border-gray-600 hover:border-primary/70 dark:hover:border-primary/80 rounded-xl font-extrabold w-12 h-12 p-0"
+                    className="border-2 border-gray-300 dark:border-gray-600 text-primary hover:text-primary hover:bg-primary/10 dark:hover:bg-primary/20 hover:border-primary/70 dark:hover:border-primary/80 rounded-xl font-extrabold w-12 h-12 p-0"
                   >
                     <Download className="h-4 w-4" />
                   </Button>
@@ -447,7 +447,7 @@ export function SettingsModal({
                     onClick={onImportData}
                     variant="outline"
                     size="sm"
-                    className="border-2 border-gray-300 dark:border-gray-600 hover:border-primary/70 dark:hover:border-primary/80 rounded-xl font-extrabold w-12 h-12 p-0"
+                    className="border-2 border-gray-300 dark:border-gray-600 text-primary hover:text-primary hover:bg-primary/10 dark:hover:bg-primary/20 hover:border-primary/70 dark:hover:border-primary/80 rounded-xl font-extrabold w-12 h-12 p-0"
                   >
                     <Upload className="h-4 w-4" />
                   </Button>

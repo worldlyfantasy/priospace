@@ -489,7 +489,7 @@ export function TaskOptionsModal({
                         <Button
                           onClick={handleAddSubtask}
                           variant="outline"
-                          className="w-full border-2 border-gray-300 font-extrabold hover:border-primary/70 dark:border-gray-600 dark:hover:border-primary/80 dark:text-gray-100 rounded-xl py-3"
+                          className="w-full border-2 border-gray-300 font-extrabold text-gray-700 hover:text-primary hover:border-primary hover:bg-primary/10 dark:border-gray-600 dark:text-gray-100 dark:hover:text-primary dark:hover:border-primary/80 dark:hover:bg-primary/15 rounded-xl py-3 transition-colors"
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Add Subtask
@@ -545,7 +545,7 @@ export function TaskOptionsModal({
                 <Button
                   variant="outline"
                   onClick={() => setShowAddTag(!showAddTag)}
-                  className="w-full border-2 border-gray-300 font-extrabold hover:border-primary/70 dark:border-gray-600 dark:hover:border-primary/80 dark:text-gray-100 rounded-xl py-3"
+                  className="w-full border-2 border-gray-300 font-extrabold text-gray-700 hover:text-primary hover:border-primary hover:bg-primary/10 dark:border-gray-600 dark:text-gray-100 dark:hover:text-primary dark:hover:border-primary/80 dark:hover:bg-primary/15 rounded-xl py-3 transition-colors"
                 >
                   <motion.div
                     animate={{ rotate: showAddTag ? 45 : 0 }}

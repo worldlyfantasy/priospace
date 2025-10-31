@@ -1,8 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Tag, Check, Calendar } from "lucide-react";
+import {
+  X,
+  Plus,
+  Tag,
+  Check,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -39,6 +47,16 @@ export function AddTaskModal({
   const [showAddTag, setShowAddTag] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [pickerMonth, setPickerMonth] = useState(
+    () =>
+      new Date(
+        (selectedDate || new Date()).getFullYear(),
+        (selectedDate || new Date()).getMonth(),
+        1
+      )
+  );
+  const datePickerRef = useRef(null);
 
   // Update taskDate when selectedDate changes
   useEffect(() => {
@@ -111,20 +129,6 @@ export function AddTaskModal({
     }
   };
 
-  // Helper function to format date for input
-  const formatDateForInput = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
-  // Helper function to parse date from input
-  const parseDateFromInput = (dateString) => {
-    const date = new Date(dateString + "T00:00:00");
-    return isNaN(date.getTime()) ? new Date() : date;
-  };
-
   // Get quick date options
   const getQuickDateOptions = () => {
     const today = new Date();
@@ -141,6 +145,116 @@ export function AddTaskModal({
   };
 
   const quickDateOptions = getQuickDateOptions();
+  const formattedTaskDate = taskDate.toLocaleDateString("en-US", {
+    month: "long",
+    day: "2-digit",
+    year: "numeric",
+  });
+
+  useEffect(() => {
+    setPickerMonth(
+      new Date(taskDate.getFullYear(), taskDate.getMonth(), 1)
+    );
+  }, [taskDate]);
+
+  useEffect(() => {
+    if (!isDatePickerOpen) return;
+
+    const handleOutsideClick = (event) => {
+      if (
+        datePickerRef.current &&
+        !datePickerRef.current.contains(event.target)
+      ) {
+        setIsDatePickerOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setIsDatePickerOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isDatePickerOpen]);
+
+  const pickerMonthLabel = pickerMonth.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  const pickerWeeks = useMemo(() => {
+    const startOfMonth = new Date(
+      pickerMonth.getFullYear(),
+      pickerMonth.getMonth(),
+      1
+    );
+    const endOfMonth = new Date(
+      pickerMonth.getFullYear(),
+      pickerMonth.getMonth() + 1,
+      0
+    );
+
+    const startOffset = (startOfMonth.getDay() + 6) % 7;
+    const days = [];
+
+    for (let i = 0; i < startOffset; i++) {
+      days.push(null);
+    }
+
+    for (let day = 1; day <= endOfMonth.getDate(); day++) {
+      days.push(
+        new Date(
+          pickerMonth.getFullYear(),
+          pickerMonth.getMonth(),
+          day
+        )
+      );
+    }
+
+    const totalCells = Math.ceil(days.length / 7) * 7;
+    while (days.length < totalCells) {
+      days.push(null);
+    }
+
+    const weeks = [];
+    for (let i = 0; i < days.length; i += 7) {
+      weeks.push(days.slice(i, i + 7));
+    }
+
+    return weeks;
+  }, [pickerMonth]);
+
+  const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  const isSameDay = (dateA, dateB) =>
+    dateA?.toDateString() === dateB?.toDateString();
+
+  const isToday = (date) =>
+    date?.toDateString() === new Date().toDateString();
+
+  const handleDaySelect = (date) => {
+    setTaskDate(new Date(date));
+    setIsDatePickerOpen(false);
+  };
+
+  const goToPickerPreviousMonth = () => {
+    setPickerMonth(
+      new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() - 1, 1)
+    );
+  };
+
+  const goToPickerNextMonth = () => {
+    setPickerMonth(
+      new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() + 1, 1)
+    );
+  };
 
   // Animation variants
   const backdropVariants = {
@@ -260,7 +374,7 @@ export function AddTaskModal({
     >
       <motion.div
         variants={modalVariants}
-        className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700"
+        className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg min-h-[620px] sm:min-h-[720px] max-h-[96vh] overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag Handle */}
@@ -276,7 +390,7 @@ export function AddTaskModal({
           />
         </motion.div>
 
-        <div className="px-6 pb-6 overflow-y-auto max-h-[calc(90vh-70px)]">
+        <div className="px-6 pb-8 overflow-y-auto max-h-[calc(96vh-80px)]">
           {/* Header */}
           <motion.div
             variants={itemVariants}
@@ -341,7 +455,10 @@ export function AddTaskModal({
                 {quickDateOptions.map((option) => (
                   <motion.button
                     key={option.label}
-                    onClick={() => setTaskDate(option.date)}
+                    onClick={() => {
+                      setTaskDate(new Date(option.date));
+                      setIsDatePickerOpen(false);
+                    }}
                     className={`px-4 py-2 text-sm font-bold rounded-full border-2 transition-all duration-200 ${
                       taskDate.toDateString() === option.date.toDateString()
                         ? "border-primary bg-primary/15 text-primary shadow-sm shadow-primary/15"
@@ -355,15 +472,105 @@ export function AddTaskModal({
                 ))}
               </div>
 
-              {/* Date Input */}
-              <input
-                type="date"
-                value={formatDateForInput(taskDate)}
-                onChange={(e) =>
-                  setTaskDate(parseDateFromInput(e.target.value))
-                }
-                className="w-full border-2 border-gray-300 focus:border-primary/70 font-extrabold dark:border-gray-600 dark:focus:border-primary/80 dark:bg-gray-800 dark:text-gray-100 rounded-xl py-3 px-4"
-              />
+              {/* Date Picker */}
+              <div className="relative" ref={datePickerRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsDatePickerOpen((open) => !open)}
+                  className="flex w-full items-center justify-between gap-4 rounded-xl border-2 border-gray-300 px-4 py-3 font-extrabold text-gray-700 transition-colors hover:border-primary hover:text-primary focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:border-primary/80 dark:hover:text-primary"
+                >
+                  <span className="text-left">{formattedTaskDate}</span>
+                  <Calendar className="h-5 w-5 text-primary" />
+                </button>
+
+                <AnimatePresence>
+                  {isDatePickerOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -12 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      className="mt-4 rounded-2xl border border-primary/20 bg-white p-4 shadow-xl dark:border-primary/40 dark:bg-gray-900"
+                    >
+                      <div className="mb-3 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={goToPickerPreviousMonth}
+                          className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/40 text-primary transition hover:bg-primary/15 dark:border-primary/50"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        <div className="text-sm font-extrabold uppercase tracking-wide text-gray-700 dark:text-gray-100">
+                          {pickerMonthLabel}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={goToPickerNextMonth}
+                          className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/40 text-primary transition hover:bg-primary/15 dark:border-primary/50"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        {weekDays.map((day) => (
+                          <div key={day}>{day}</div>
+                        ))}
+                      </div>
+
+                      <div className="mt-2 grid grid-cols-7 gap-2">
+                        {pickerWeeks.map((week, weekIndex) =>
+                          week.map((date, dayIndex) => {
+                            if (!date) {
+                              return (
+                                <div
+                                  key={`empty-${weekIndex}-${dayIndex}`}
+                                  className="h-10"
+                                />
+                              );
+                            }
+
+                            const selected = isSameDay(date, taskDate);
+                            const today = isToday(date);
+
+                            let classes =
+                              "flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold transition-colors duration-150 text-gray-600 dark:text-gray-200 hover:bg-primary/10 hover:text-primary";
+
+                            if (selected) {
+                              classes +=
+                                " border-2 border-primary bg-primary/15 text-primary shadow-sm";
+                            } else if (today) {
+                              classes += " border border-primary/60 text-primary";
+                            }
+
+                            return (
+                              <button
+                                key={date.toISOString()}
+                                type="button"
+                                onClick={() => handleDaySelect(date)}
+                                className={classes}
+                              >
+                                {date.getDate()}
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      <div className="mt-4 flex justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => handleDaySelect(new Date())}
+                          className="border-2 border-primary text-primary hover:bg-primary/10 dark:border-primary/80 dark:text-primary dark:hover:bg-primary/15"
+                        >
+                          Today
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </motion.div>
 
             {/* Category Selection */}
@@ -404,7 +611,7 @@ export function AddTaskModal({
                 <Button
                   variant="outline"
                   onClick={() => setShowAddTag(!showAddTag)}
-                  className="w-full border-2 border-gray-300 font-extrabold hover:border-primary/70 hover:bg-primary/10 dark:border-gray-600 dark:hover:border-primary/80 dark:hover:bg-primary/15 dark:text-gray-100 rounded-xl py-3 transition-colors"
+                  className="w-full border-2 border-gray-300 font-extrabold text-gray-700 hover:text-primary hover:border-primary hover:bg-primary/10 dark:border-gray-600 dark:text-gray-100 dark:hover:text-primary dark:hover:border-primary/80 dark:hover:bg-primary/15 rounded-xl py-3 transition-colors"
                 >
                   <motion.div
                     animate={{ rotate: showAddTag ? 45 : 0 }}
@@ -533,7 +740,7 @@ export function AddTaskModal({
                 <Button
                   variant="outline"
                   onClick={onClose}
-                  className="px-6 py-6 rounded-xl font-bold border-2 border-gray-300 hover:border-primary/70 dark:border-gray-600 dark:hover:border-primary/80 dark:text-gray-100"
+                  className="px-6 py-6 rounded-xl font-bold border-2 border-gray-300 text-gray-700 hover:text-primary hover:border-primary hover:bg-primary/10 dark:border-gray-600 dark:text-gray-100 dark:hover:text-primary dark:hover:border-primary/80 dark:hover:bg-primary/15 transition-colors"
                 >
                   Cancel
                 </Button>
